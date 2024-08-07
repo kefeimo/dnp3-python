@@ -2,10 +2,13 @@ import argparse
 import logging
 import random
 import sys
+from datetime import datetime
 from time import sleep
 
 from dnp3_python.dnp3station.outstation import MyOutStation
+from dnp3_python.dnp3station.station_utils import to_flat_db, to_pnnl_schema
 from pydnp3 import opendnp3
+from tabulate import tabulate
 
 stdout_stream = logging.StreamHandler(sys.stdout)
 stdout_stream.setFormatter(
@@ -110,6 +113,7 @@ def print_menu():
 <bo> - update binary-output point value (for local control)
 <dd> - display database
 <dc> - display configuration
+<sc> - take a screenshot of the current database point values
 <q>  - quit the program
 ================================================================="""
     print(welcome_str)
@@ -342,15 +346,28 @@ def main(parser=None, *args, **kwargs):
                 print("You chose < dd > - display database")
                 db_print = outstation_application.db_handler.db
                 # print(db_print)
-                from dnp3_python.dnp3station.station_utils import to_flat_db
-                from tabulate import tabulate
 
-                print(tabulate(to_flat_db(db_print), headers="keys", tablefmt="grid"))
+                # print(tabulate(to_flat_db(db_print), headers="keys", tablefmt="grid"))
+                print(
+                    tabulate(to_pnnl_schema(db_print), headers="keys", tablefmt="grid")
+                )
+
                 sleep(2)
                 break
             elif option == "dc":
-                print("You chose < dc> - display configuration")
+                print("You chose < dc > - display configuration")
                 print(outstation_application.get_config())
+                sleep(3)
+                break
+            elif option == "sc":
+                print(
+                    "You chose < sc > - take a screenshot of the current database point values"
+                )
+                db_print = outstation_application.db_handler.db
+                df_save = to_pnnl_schema(db_print, is_wrapped_text=False)
+                p_save = f'/tmp/dnp3_db_screenshot_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
+                df_save.to_csv(p_save)
+                print(f"The database screenshot has been saved to {p_save}.")
                 sleep(3)
                 break
             elif option == "q":

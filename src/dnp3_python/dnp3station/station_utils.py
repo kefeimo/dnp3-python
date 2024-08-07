@@ -4,6 +4,7 @@ import sys
 import time
 from typing import Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
+import pandas as pd
 from pydnp3 import asiodnp3, asiopal, opendnp3, openpal
 from pydnp3.opendnp3 import GroupVariation, GroupVariationID
 
@@ -535,3 +536,44 @@ def to_flat_db(db: dict) -> dict:
             db_flat["Value"] += values
             db_flat["Type"] += types
     return db_flat
+
+
+def to_pnnl_schema(db: dict, is_wrapped_text=True) -> pd.DataFrame:
+    db_flat = to_flat_db(db)
+    df_flat = pd.DataFrame(db_flat)
+
+    def dnp3_name_mapping(default_name: str) -> str:
+        point_type, point_index = default_name.split("_")[0], default_name.split("_")[1]
+        if point_type == "Analog":
+            schema_type = "AI"
+        elif point_type == "AnalogOutputStatus":
+            schema_type = "AO"
+        elif point_type == "Binary":
+            schema_type = "BI"
+        else:  # point_type == "BinaryOutputStatus":
+            schema_type = "BO"
+
+        return f"{schema_type}-{(point_index).zfill(3)}"  # 'padding in-front with zeros up to 3 digits
+
+    df_flat["point_name"] = df_flat["Name"].apply(lambda x: dnp3_name_mapping(x))
+    df_points = pd.read_csv("/home/kefei/project/dnp3-python/dnp3-example-schema.csv")
+
+    import textwrap
+
+    def wrap_text(text, width):
+        return "\n".join(textwrap.wrap(text, width=width))
+
+    df_merged = pd.merge(
+        df_flat[["Value", "point_name"]],
+        df_points,
+        left_on="point_name",
+        right_on="Point",
+    ).drop("point_name", axis=1)
+
+    if is_wrapped_text:
+        df_merged["Desc_Short"] = df_merged["Desc_Short"].apply(
+            lambda x: wrap_text(x, width=30)
+        )
+    # df_merged["Value"] = df_merged["Value"].apply(lambda x: int(x))
+
+    return df_merged
