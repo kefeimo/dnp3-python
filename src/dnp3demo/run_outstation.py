@@ -65,6 +65,38 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument(
         "--init-random", action="store_true", help="if appears, init with random values"
     )
+    parser.add_argument(
+        "--n-ai=",
+        action="store",
+        default=5,
+        type=int,
+        metavar="<num>",
+        help="number of AnalogInput, default: 5",
+    )
+    parser.add_argument(
+        "--n-ao=",
+        action="store",
+        default=5,
+        type=int,
+        metavar="<num>",
+        help="number of AnalogOutput, default: 5",
+    )
+    parser.add_argument(
+        "--n-bi=",
+        action="store",
+        default=5,
+        type=int,
+        metavar="<num>",
+        help="number of BinaryInput, default: 5",
+    )
+    parser.add_argument(
+        "--n-bo=",
+        action="store",
+        default=5,
+        type=int,
+        metavar="<num>",
+        help="number of BinaryOutput, default: 5",
+    )
 
     return parser
 
@@ -100,19 +132,17 @@ def main(parser=None, *args, **kwargs):
     d_args = vars(args)
     print(__name__, d_args)
 
-    from pydnp3 import opendnp3
-
-    db_sizes = opendnp3.DatabaseSizes.AllTypes(count=5)
-    # db_sizes = opendnp3.DatabaseSizes(numBinary=1,
-    #                                   numDoubleBinary=2,
-
-    #                                   numAnalog=3,
-    #                                   numCounter=4,
-    #                                   numFrozenCounter=5,
-    #                                   numBinaryOutputStatus=6,
-    #                                   numAnalogOutputStatus=7,
-
-    #                                   numTimeAndInterval=8)
+    # db_sizes = opendnp3.DatabaseSizes.AllTypes(count=5)
+    db_sizes = opendnp3.DatabaseSizes(
+        numBinary=1,
+        numBinaryOutputStatus=6,
+        numDoubleBinary=2,
+        numAnalog=3,
+        numAnalogOutputStatus=7,
+        numCounter=4,
+        numFrozenCounter=5,
+        numTimeAndInterval=8,
+    )
     # db_sizes = opendnp3.DatabaseSizes(1,
     #                                   2,
 
@@ -130,10 +160,14 @@ def main(parser=None, *args, **kwargs):
         port=d_args.get("port="),
         master_id=d_args.get("master_id="),
         outstation_id=d_args.get("outstation_id="),
-        db_sizes=db_sizes,
+        # db_sizes=db_sizes,
         # channel_log_level=opendnp3.levels.ALL_COMMS,
         # master_log_level=opendnp3.levels.ALL_COMMS
         # soe_handler=SOEHandler(soehandler_log_level=logging.DEBUG)
+        numAnalog=d_args.get("n_ai="),
+        numAnalogOutputStatus=d_args.get("n_ao="),
+        numBinary=d_args.get("n_bi="),
+        numBinaryOutputStatus=d_args.get("n_bo="),
     )
     _log.info("Connection Config", outstation_application.get_config())
     outstation_application.start()
