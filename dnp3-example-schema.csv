@@ -1,0 +1,7 @@
+﻿Point,Desc_Short,Min,Max,Mult,Units
+AI-000,DER Profile Version Number,100,10000,0.01,n/a
+AI-001,DER Profile Implementation Level,1,3,1,n/a
+AI-002,Nameplate Minimum Voltage Rating ,0,2147483647,0.1,Volts
+AI-003,Nameplate Maximum Voltage Rating,0,2147483647,0.1,Volts
+AI-004,Nameplate Active Generation Power Rating at Unity Power Factor,0,2147483647,1,Watts
+AI-005,Nameplate Active Charging Power Rating at Unity Power Factor,-2147483648,0,1,Watts
