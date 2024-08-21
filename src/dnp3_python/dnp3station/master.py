@@ -1,3 +1,4 @@
+import datetime
 import logging
 import sys
 import time
@@ -6,13 +7,21 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 from pydnp3 import asiodnp3, asiopal, opendnp3, openpal
 from pydnp3.opendnp3 import GroupVariation, GroupVariationID
 
-# from visitors import *
-from .visitors import *
+from .station_utils import (
+    AppChannelListener,
+    MyLogger,
+    SOEHandler,
+    collection_callback,
+    command_callback,
+    parsing_gv_to_mastercmdtype,
+    parsing_gvid_to_gvcls,
+    restart_callback,
+)
+from .visitors import *  # noqa: F403
 
 FILTERS = opendnp3.levels.NORMAL | opendnp3.levels.ALL_COMMS
 HOST = "127.0.0.1"  # remote outstation
 LOCAL = "0.0.0.0"  # local masterstation
-# HOST = "192.168.1.14"
 PORT = 20000
 
 stdout_stream = logging.StreamHandler(sys.stdout)
@@ -25,19 +34,6 @@ _log = logging.getLogger(__name__)
 # _log.setLevel(logging.DEBUG)
 # _log.setLevel(logging.ERROR)
 _log.setLevel(logging.INFO)
-
-import datetime
-
-from .station_utils import (
-    AppChannelListener,
-    MyLogger,
-    SOEHandler,
-    collection_callback,
-    command_callback,
-    parsing_gv_to_mastercmdtype,
-    parsing_gvid_to_gvcls,
-    restart_callback,
-)
 
 # alias DbPointVal
 DbPointVal = Union[float, int, bool, None]
@@ -146,7 +142,7 @@ class MyMaster:
 
         # init Master(master)
         _log.debug("Adding the master to the channel.")
-        self.master = self.channel.AddMaster(
+        self.master: asiodnp3.IMaster = self.channel.AddMaster(
             id="master",
             SOEHandler=self.soe_handler,
             # SOEHandler=asiodnp3.PrintingSOEHandler().Create(),
@@ -223,11 +219,7 @@ class MyMaster:
         numOpen - numClose == 1 => SUCCESS
         numOpen - numClose == 0 => FAIL
         """
-        if (
-            self.channel_statistic.get("numOpen")
-            - self.channel_statistic.get("numClose")
-            == 1
-        ):
+        if self.channel_statistic["numOpen"] - self.channel_statistic["numClose"] == 1:
             return True
         else:
             return False
@@ -398,6 +390,25 @@ class MyMaster:
 
         return ret_val
 
+    def ScanAllObjects(
+        self,
+        master_session: asiodnp3.IMaster,
+        gvId: opendnp3.GroupVariationID,
+        config: opendnp3.TaskConfig,
+    ):
+        """
+        Note: ScanAllObjects implements in deps/dnp3/cpp/libs/src/asiodnp3/MasterSessionStack.cpp
+
+        void MasterSessionStack::ScanAllObjects(GroupVariationID gvId, const TaskConfig& config)
+            {
+                auto action = [self = shared_from_this(), gvId, config]() -> void { self->context.ScanAllObjects(gvId, config); };
+                return executor->strand.post(action);
+            }
+
+        """
+        return master_session.ScanAllObjects(gvId, config)
+        # return "dfds"
+
     def _get_updated_val_storage(self, gv_id: opendnp3.GroupVariationID) -> DbStorage:
         """
         Wrap on self.master.ScanAllObjects with retry logic
@@ -412,7 +423,7 @@ class MyMaster:
         # perform scan
         config = opendnp3.TaskConfig().Default()
         # TODO: "prettify" the following while loop workflow. e.g., helper function + recurrent function
-        self.master.ScanAllObjects(gvId=gv_id, config=config)
+        self.ScanAllObjects(self.master, gv_id, config)
         # gv_cls: opendnp3.GroupVariation = parsing_gvid_to_gvcls(gv_id)
         # # update stale logic to improve performance
         # self.soe_handler.update_stale_db()
@@ -423,7 +434,7 @@ class MyMaster:
         n_retry = 0
         sleep_delay = self.delay_polling_retry  # in seconds
         while gv_db_val is None and n_retry < retry_max:
-            self.master.ScanAllObjects(gvId=gv_id, config=config)
+            self.ScanAllObjects(self.master, gv_id, config)
             # gv_cls: opendnp3.GroupVariation = parsing_gvid_to_gvcls(gv_id)
             time.sleep(sleep_delay)
             gv_db_val = self.soe_handler.gv_index_value_nested_dict.get(gv_cls)
@@ -643,4 +654,4 @@ class MyMaster:
                 GroupVariationID(group=10, variation=2),
             ]
         for gv_id in gv_ids:
-            self.master.ScanAllObjects(gvId=gv_id, config=config)
+            self.ScanAllObjects(self.master, gv_id, config)
