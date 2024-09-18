@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import sys
 import time
+from datetime import datetime
 from typing import Dict, Type, Union
 
 import pydnp3.asiopal
@@ -11,6 +12,7 @@ from pydnp3 import asiodnp3, asiopal, opendnp3, openpal
 # from .outstation_utils import MeasurementType
 from .station_utils import (
     DBHandler,
+    Dnp3Database,
     MasterCmdType,
     OutstationCmdType,
     master_to_outstation_command_parser,
@@ -86,10 +88,11 @@ class MyOutStation(opendnp3.IOutstationApplication):
         outstation_log_level=opendnp3.levels.NORMAL,
         db_sizes: opendnp3.DatabaseSizes = None,
         event_buffer_config: opendnp3.EventBufferConfig = None,
-        numBinary: int = None,
-        numBinaryOutputStatus: int = None,
-        numAnalog: int = None,
-        numAnalogOutputStatus: int = None,
+        numBinary: int | None = None,
+        numBinaryOutputStatus: int | None = None,
+        numAnalog: int | None = None,
+        numAnalogOutputStatus: int | None = None,
+        is_allowUnsolicited: bool = True,
         *args,
         **kwargs,
     ):
@@ -143,7 +146,9 @@ class MyOutStation(opendnp3.IOutstationApplication):
         _log.debug("Configuring the DNP3 stack.")
         _log.debug("Configuring the outstation database.")
         self.stack_config = self.configure_stack(
-            db_sizes=self.db_sizes, event_buffer_config=event_buffer_config
+            db_sizes=self.db_sizes,
+            event_buffer_config=event_buffer_config,
+            is_allowUnsolicited=is_allowUnsolicited,
         )
 
         # TODO: Justify if this is is really working? (Not sure if it really takes effect yet.)
@@ -302,6 +307,7 @@ class MyOutStation(opendnp3.IOutstationApplication):
         self,
         db_sizes: opendnp3.DatabaseSizes = None,
         event_buffer_config: opendnp3.EventBufferConfig = None,
+        is_allowUnsolicited: bool = True,
         **kwargs,
     ) -> asiodnp3.OutstationStackConfig:
         """Set up the OpenDNP3 configuration."""
@@ -310,7 +316,7 @@ class MyOutStation(opendnp3.IOutstationApplication):
 
         stack_config.outstation.eventBufferConfig = event_buffer_config
         stack_config.outstation.params.allowUnsolicited = (
-            True  # TODO: create interface for this
+            is_allowUnsolicited  # TODO: doesn't seem to take effect
         )
         stack_config.link.LocalAddr = (
             self.outstation_id
@@ -331,12 +337,13 @@ class MyOutStation(opendnp3.IOutstationApplication):
         Configure two Binary points (group/variation 1.2) at indexes 1 and 2.
         """
 
+        _log.info("======== configure_database")
         # AnalogInput
         db_config.analog[0].clazz = opendnp3.PointClass.Class2
         # db_config.analog[0].svariation = opendnp3.StaticAnalogVariation.Group30Var1
-        db_config.analog[
-            0
-        ].svariation = opendnp3.StaticAnalogVariation.Group30Var5  # note: experiment, Analog input - double-precision, floating-point with flag ref: https://docs.stepfunc.io/dnp3/0.9.0/dotnet/namespacednp3.html#aa326dc3592a41ae60222051044fb084f
+        # note: experiment, Analog input - double-precision, floating-point with flag
+        # ref: https://docs.stepfunc.io/dnp3/0.9.0/dotnet/namespacednp3.html#aa326dc3592a41ae60222051044fb084f
+        db_config.analog[0].svariation = opendnp3.StaticAnalogVariation.Group30Var5
         db_config.analog[0].evariation = opendnp3.EventAnalogVariation.Group32Var7
         db_config.analog[1].clazz = opendnp3.PointClass.Class2
         db_config.analog[1].svariation = opendnp3.StaticAnalogVariation.Group30Var1
@@ -441,7 +448,11 @@ class MyOutStation(opendnp3.IOutstationApplication):
         # builder = asiodnp3.UpdateBuilder()
         # builder.Update(measurement, index)
         # update = builder.Build()
-        update = asiodnp3.UpdateBuilder().Update(measurement, index).Build()
+        update = (
+            asiodnp3.UpdateBuilder()
+            .Update(measurement, index, opendnp3.EventMode.Force)
+            .Build()
+        )
         # cls.get_outstation().Apply(update)
         self.outstation.Apply(update)
 
@@ -535,3 +546,119 @@ class AppChannelListener(asiodnp3.IChannelListener):
 
     def OnStateChange(self, state):
         _log.debug("In AppChannelListener.OnStateChange: state={}".format(state))
+
+
+class OutStationApplication:
+    """Public interface wrapper on MyOutstation.outstation_application"""
+
+    def __init__(
+        self,
+        outstation_ip: str = "0.0.0.0",
+        port: int = 20000,
+        master_id: int = 2,
+        outstation_id: int = 1,
+        concurrency_hint: int = 1,
+        channel_log_level=opendnp3.levels.NORMAL,
+        outstation_log_level=opendnp3.levels.NORMAL,
+        db_sizes: opendnp3.DatabaseSizes = None,
+        event_buffer_config: opendnp3.EventBufferConfig = None,
+        numBinary: int | None = None,
+        numBinaryOutputStatus: int | None = None,
+        numAnalog: int | None = None,
+        numAnalogOutputStatus: int | None = None,
+        is_allowUnsolicited: bool = True,  # TODO: doesn't seem to take effect
+        *args,
+        **kwargs,
+    ):
+        self.my_outstation = MyOutStation(
+            outstation_ip=outstation_ip,
+            port=port,
+            master_id=master_id,
+            outstation_id=outstation_id,
+            concurrency_hint=concurrency_hint,
+            channel_log_level=channel_log_level,
+            outstation_log_level=outstation_log_level,
+            db_sizes=db_sizes,
+            event_buffer_config=event_buffer_config,
+            numBinary=numBinary,
+            numBinaryOutputStatus=numBinaryOutputStatus,
+            numAnalog=numAnalog,
+            numAnalogOutputStatus=numAnalogOutputStatus,
+            is_allowUnsolicited=is_allowUnsolicited,
+            *args,
+            **kwargs,
+        )
+
+    def start(self) -> None:
+        return self.my_outstation.start()
+
+    def shutdown(self) -> None:
+        return self.my_outstation.shutdown()
+
+    @property
+    def is_connected(self) -> bool:
+        return self.my_outstation.is_connected
+
+    def apply_update(self, measurement: OutstationCmdType, index: int) -> None:
+        """
+            Record an opendnp3 data value (Analog, Binary, etc.) in the outstation's database.
+            Note: measurement based on asiodnp3.UpdateBuilder.Update(**args)
+
+            The data value gets sent to the Master as a side effect.
+
+        :param measurement: An instance of Analog, Binary, or another opendnp3 data value.
+        :param index: (integer) Index of the data definition in the opendnp3 database.
+        """
+        return self.my_outstation.apply_update(measurement, index)
+
+    def apply_update_analog_input(self, analog_input_value: float, index: int) -> None:
+        """
+        wrapper on apply_update for AnalogInput
+        """
+        measurement = opendnp3.Analog(value=analog_input_value)
+
+        return self.my_outstation.apply_update(measurement, index)
+
+    def apply_update_analog_output(
+        self, analog_output_value: float, index: int
+    ) -> None:
+        """
+        wrapper on apply_update for AnalogOutput
+        """
+        measurement = opendnp3.AnalogOutputStatus(value=analog_output_value)
+
+        return self.my_outstation.apply_update(measurement, index)
+
+    def apply_update_binary_input(self, binary_input_value: bool, index: int) -> None:
+        """
+        wrapper on apply_update for BinaryInput
+        """
+        measurement = opendnp3.Binary(value=binary_input_value)
+
+        return self.my_outstation.apply_update(measurement, index)
+
+    def apply_update_binary_output(self, binary_output_value: bool, index: int) -> None:
+        """
+        wrapper on apply_update for BinaryOutput
+        """
+        measurement = opendnp3.BinaryOutputStatus(value=binary_output_value)
+
+        return self.my_outstation.apply_update(measurement, index)
+
+    @property
+    def db(self) -> dict:
+        return self.my_outstation.db_handler.db
+
+    @property
+    def dnp3_database(self) -> Dnp3Database:
+        return self.my_outstation.db_handler.dnp3_database
+
+    def print_dnp3_database(self) -> None:
+        print(self.dnp3_database.to_csv())
+
+    def dnp3_database_to_csv(self, file_path: str | None = None):
+        if file_path is None:
+            file_path = f"/tmp/outstation_dnp3_database_{str(datetime.now())}.csv"
+            file_path = file_path.replace(" ", "_")
+        self.dnp3_database.to_csv(file_path)
+        # _log.info(f"Saved dnp3-database to {file_path=}")

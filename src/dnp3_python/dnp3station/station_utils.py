@@ -1,7 +1,11 @@
+import csv
 import datetime
+import io
 import logging
+import os
 import sys
 import time
+from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import pandas as pd
@@ -118,6 +122,12 @@ class SOEHandler(opendnp3.ISOEHandler):
         # db
         self._db = self.init_db()
 
+        # temp: TODO get rid of them
+        self.visitor_dict: Dict[str, "VisitorClass"] = {}
+        self.value_visitor_dict: Dict[str, ICollectionIndexedVal] = {}
+        self.info_visitor_dict: Dict[str, ICollectionIndexedVal] = {"ds": "dfs"}
+        self.temp_values = None
+
     def config_logger(self, log_level=logging.INFO):
         self.logger.addHandler(stdout_stream)
         self.logger.setLevel(log_level)
@@ -153,10 +163,11 @@ class SOEHandler(opendnp3.ISOEHandler):
                 GroupVariation.Group30Var3,
                 GroupVariation.Group30Var4,
                 # GroupVariation.Group32Var0,
-                GroupVariation.Group32Var1,
+                # GroupVariation.Group32Var1,
                 GroupVariation.Group32Var2,
                 GroupVariation.Group32Var3,
                 GroupVariation.Group32Var4,
+                GroupVariation.Group32Var5,
             ]:
                 visitor = VisitorIndexedAnalogInt()
         elif visitor_class == VisitorIndexedAnalogOutputStatus:
@@ -174,6 +185,14 @@ class SOEHandler(opendnp3.ISOEHandler):
         # Note: mystery method, magic side effect to update visitor.index_and_value
         values.Foreach(visitor)
 
+        self.visitor_dict[str(visitor_class)] = visitor
+        self.value_visitor_dict[str(visitor_class)] = visitor
+        # info.Foreach(visitor)
+        self.info_visitor_dict[str(visitor_class)] = info
+        # self.info_ = info
+
+        # values.Foreach(visitor)
+
         # visitor.index_and_value: List[Tuple[int, DbPointVal]]
         for index, value in visitor.index_and_value:
             log_string = "SOEHandler.Process {0}\theaderIndex={1}\tdata_type={2}\tindex={3}\tvalue={4}"
@@ -187,9 +206,11 @@ class SOEHandler(opendnp3.ISOEHandler):
         info_gv: GroupVariation = info.gv
         visitor_ind_val: List[Tuple[int, DbPointVal]] = visitor.index_and_value
 
-        # _log.info("======== SOEHandler.Process")
-        # _log.info(f"info_gv {info_gv}")
+        _log.info("======== SOEHandler.Process")
+        _log.info(f"{info_gv=}")
         # _log.info(f"visitor_ind_val {visitor_ind_val}")
+        _log.info(f"{values=}")
+        self.temp_values = values
         self._post_process(info_gv=info_gv, visitor_ind_val=visitor_ind_val)
 
     def _post_process(
@@ -260,7 +281,7 @@ class SOEHandler(opendnp3.ISOEHandler):
         "Binary", "BinaryOutputStatus", "Analog", "AnalogOutputStatus"
         """
         pass
-        # for Analog
+        # for Analog (TODO: why get GroupVariation.Group30Var6)
         _db = {
             "Analog": self._gv_index_value_nested_dict.get(GroupVariation.Group30Var6)
         }
@@ -458,10 +479,13 @@ class DBHandler:
         **kwargs,
     ):
         self.stack_config = stack_config
-        self._db: dict = self.config_db(stack_config)
+        self._db: dict = self.config_db(
+            stack_config
+        )  # TODO: ideally, this should be a dataclass
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.config_logger(log_level=dbhandler_log_level)
+        self.dnp3_database: Dnp3Database = Dnp3Database()
 
     def config_logger(self, log_level=logging.INFO):
         self.logger.addHandler(stdout_stream)
@@ -488,9 +512,13 @@ class DBHandler:
     def db(self) -> dict:
         return self._db
 
-    def process(self, command, index):
-        pass
-        # _log.info(f"command {command}")
+    def process(self, command: OutstationCmdType, index: int):
+        """
+        Note: this method would be magically evoked when outstation apply_update,
+        or receive command from master.
+        command.__class__.__name__ is in ["Analog", "AnalogOutputStatus", "Binary", "BinaryOutputStatus"]
+        """
+        # _log.info(f"{command=}, {type(command)=}")
         # _log.info(f"index {index}")
         update_body: dict = {index: command.value}
         if self.db.get(command.__class__.__name__):
@@ -498,6 +526,19 @@ class DBHandler:
         else:
             self.db[command.__class__.__name__] = update_body
         # _log.info(f"========= self.db {self.db}")
+        command_to_dataclass_type = {
+            "Analog": "AnalogInput",
+            "AnalogOutputStatus": "AnalogOutput",
+            "Binary": "BinaryInput",
+            "BinaryOutputStatus": "BinaryOutput",
+        }
+        self.dnp3_database.add_point(
+            command_to_dataclass_type[command.__class__.__name__],
+            index,
+            command.value,
+            str(datetime.datetime.now()),
+            # datetime.datetime.now(),
+        )
 
 
 class MyLogger(openpal.ILogHandler):
@@ -577,3 +618,168 @@ def to_pnnl_schema(db: dict, is_wrapped_text=True) -> pd.DataFrame:
     # df_merged["Value"] = df_merged["Value"].apply(lambda x: int(x))
 
     return df_merged
+
+
+import datetime
+from dataclasses import dataclass, field
+from typing import List
+
+
+@dataclass(frozen=True)
+class Dnp3DatabaseRecord:
+    """
+    Represents a record in a DNP3 database.
+
+    Attributes:
+        point_type (str): The type of point, e.g., AnalogInput, AnalogOutput.
+        index (int): The index of the point in the database.
+        value (str | float | bool | None): The value of the point.
+        updated_at (datetime.datetime): The timestamp when the point was last updated.
+        received_at (datetime.datetime): The timestamp when the point was last received.
+
+    Example:
+        >>> record = Dnp3DatabaseRecord(
+                point_type="AnalogInput",
+                index=1,
+                value=123.45,
+                updated_at=datetime.datetime.now(),
+                received_at=datetime.datetime.now()
+            )
+    """
+
+    point_type: str
+    index: int
+    value: str | float | bool | None
+    updated_at: str | datetime.datetime
+    # received_at: datetime.datetime
+
+
+@dataclass
+class Dnp3Database:
+    """
+    Represents a database for storing DNP3 data points.
+
+    Attributes:
+        rows (List[Dnp3DatabaseRecord]): A list of Dnp3DatabaseRecord instances.
+
+    Example:
+        >>> db = Dnp3Database()
+        >>> db.add_point("AnalogInput", 1, 123.45, datetime.datetime.now())
+        >>> print(db.query_by_type("AnalogInput"))
+        >>> sorted_db = db.sort_by_field("index")
+        >>> print(sorted_db.rows)
+    """
+
+    rows: List[Dnp3DatabaseRecord] = field(default_factory=list)
+
+    def add_point(
+        self,
+        point_type: str,
+        index: int,
+        value: str | float | bool | None,
+        updated_at: str | datetime.datetime,
+        # received_at: datetime.datetime,
+    ):
+        """
+        Adds a new point to the database.
+
+        Args:
+            point_type (str): The type of point, must be one of ["AnalogInput", "AnalogOutput", "BinaryInput", "BinaryOutput"].
+            index (int): The index of the point.
+            value (str | float | bool | None): The value of the point.
+            updated_at (datetime.datetime): The timestamp when the point is being updated.
+            received_at (datetime.datetime): The timestamp when the point is being received.
+
+        Raises:
+            ValueError: If the point_type is not valid.
+
+        Example:
+            >>> db.add_point("BinaryInput", 2, True, datetime.datetime.now(), datetime.datetime.now())
+        """
+        if point_type in ["AnalogInput", "AnalogOutput", "BinaryInput", "BinaryOutput"]:
+            new_record = Dnp3DatabaseRecord(point_type, index, value, updated_at)
+            self.rows.append(new_record)
+        else:
+            raise ValueError("Invalid point type")
+
+    def query_by_type(self, point_type: str) -> "Dnp3Database":
+        """
+        Queries the database for all records of a specified type.
+
+        Args:
+            point_type (str): The type of points to query for.
+
+        Returns:
+            Dnp3Database: A new Dnp3Database instance containing only the records of the specified type.
+
+        Example:
+            >>> db.query_by_type("AnalogInput")
+        """
+        filtered_rows = [point for point in self.rows if point.point_type == point_type]
+        return Dnp3Database(filtered_rows)
+
+    def sort_by_field(
+        self, field_name: str, descending: bool = False
+    ) -> "Dnp3Database":
+        """
+        Sorts the database by a specified field.
+
+        Args:
+            field_name (str): The name of the field to sort by.
+            descending (bool): Whether to sort in descending order.
+
+        Returns:
+            Dnp3Database: A new Dnp3Database instance containing the sorted records.
+
+        Raises:
+            ValueError: If the field_name does not exist in the records.
+
+        Example:
+            >>> db.sort_by_field("updated_at", descending=True)
+        """
+        if not self.rows:
+            return Dnp3Database()
+        if hasattr(self.rows[0], field_name):
+            sorted_rows = sorted(
+                self.rows, key=lambda x: getattr(x, field_name), reverse=descending
+            )
+            return Dnp3Database(sorted_rows)
+        else:
+            raise ValueError(f"Field {field_name} does not exist in Point data class")
+
+    def to_csv(self, file_path: str | None = None) -> str:
+        """
+        Converts the database records to a CSV formatted string.
+
+        Returns:
+            str: A string containing the CSV representation of the database records.
+
+        Example:
+            >>> db = Dnp3Database()
+            >>> db.add_point("AnalogInput", 1, 123.45, datetime.datetime.now(), datetime.datetime.now())
+            >>> print(db.to_csv())
+        """
+        output = io.StringIO()
+        writer = csv.DictWriter(
+            output,
+            fieldnames=["point_type", "index", "value", "updated_at"],
+        )
+        writer.writeheader()
+        for record in self.rows:
+            writer.writerow(asdict(record))
+
+        # Ensure the file exists, if not, create it
+        output_stream = output.getvalue()
+        if file_path:
+            try:
+                with open(file_path, "w") as f:
+                    f.write(output_stream)
+                _log.info(f"Wrote dnp3-database to {file_path=}")
+            except FileNotFoundError:
+                # If the directory doesn't exist, you may want to create it
+                directory = os.path.dirname(file_path)
+                os.makedirs(directory, exist_ok=True)
+                # After ensuring the directory exists, try writing again
+                with open(file_path, "w") as f:
+                    f.write(output_stream)
+        return output_stream
