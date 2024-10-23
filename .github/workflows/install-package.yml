@@ -1,0 +1,45 @@
+name: Install Package Test
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10]  
+
+    steps:
+    - uses: actions/checkout@v2
+      name: Check out repository code
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Install any other dependencies here
+
+    - name: Install and Test Package
+      run: |
+        python -m venv env
+        source env/bin/activate
+        python setup.py install
+        python -c "import dnp3_python; print(dnp3_python)"
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+
+    - name: Clean up
+      if: always()
+      run: rm -rf env
