@@ -1,111 +1,52 @@
-import argparse
 import logging
-import random
 import sys
-from datetime import datetime
+import argparse
+
+from pydnp3 import opendnp3
+from dnp3_python.dnp3station.outstation_new import MyOutStationNew
+
 from time import sleep
 
-from dnp3_python.dnp3station.outstation import MyOutStation
-from dnp3_python.dnp3station.station_utils import to_flat_db, to_pnnl_schema
-from pydnp3 import opendnp3
-from tabulate import tabulate
-
 stdout_stream = logging.StreamHandler(sys.stdout)
-stdout_stream.setFormatter(
-    logging.Formatter("%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s")
-)
+stdout_stream.setFormatter(logging.Formatter('%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s'))
 
-_log = logging.getLogger(f"{__file__}, {__name__}")
+_log = logging.getLogger(__name__)
+_log = logging.getLogger("control_workflow_demo")
 _log.addHandler(stdout_stream)
 _log.setLevel(logging.DEBUG)
 
 
-def input_prompt(display_str=None, prefix="", menu_indicator="") -> str:
+def input_prompt(display_str=None) -> str:
     if display_str is None:
-        display_str = f"""
-======== Your Input Here: ==(Outstation-{menu_indicator})======
->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        display_str = """
+======== Your Input Here: ==(outstation)======
 """
-    return input(prefix + display_str)
+    return input(display_str)
 
 
 def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+
     # Adding optional argument
     # parser.add_argument("-mip", "--master-ip", action="store", default="0.0.0.0", type=str,
     #                     metavar="<IP>")
-    parser.add_argument(
-        "--outstation-ip=",
-        action="store",
-        default="0.0.0.0",
-        type=str,
-        metavar="<IP>",
-        help="outstation ip, default: 0.0.0.0",
-    )
-    parser.add_argument(
-        "--port=",
-        action="store",
-        default=20000,
-        type=int,
-        metavar="<PORT>",
-        help="port, default: 20000",
-    )
-    parser.add_argument(
-        "--master-id=",
-        action="store",
-        default=2,
-        type=int,
-        metavar="<ID>",
-        help="master id, default: 2",
-    )
-    parser.add_argument(
-        "--outstation-id=",
-        action="store",
-        default=1,
-        type=int,
-        metavar="<ID>",
-        help="master id, default: 1",
-    )
-    parser.add_argument(
-        "--init-random", action="store_true", help="if appears, init with random values"
-    )
-    parser.add_argument(
-        "--n-ai=",
-        action="store",
-        default=5,
-        type=int,
-        metavar="<num>",
-        help="number of AnalogInput, default: 5",
-    )
-    parser.add_argument(
-        "--n-ao=",
-        action="store",
-        default=5,
-        type=int,
-        metavar="<num>",
-        help="number of AnalogOutput, default: 5",
-    )
-    parser.add_argument(
-        "--n-bi=",
-        action="store",
-        default=5,
-        type=int,
-        metavar="<num>",
-        help="number of BinaryInput, default: 5",
-    )
-    parser.add_argument(
-        "--n-bo=",
-        action="store",
-        default=5,
-        type=int,
-        metavar="<num>",
-        help="number of BinaryOutput, default: 5",
-    )
+    parser.add_argument("--outstation-ip=", action="store", default="0.0.0.0", type=str,
+                        metavar="<IP>",
+                        help="outstation ip, default: 0.0.0.0")
+    parser.add_argument("--port=", action="store", default=20000, type=int,
+                        metavar="<PORT>",
+                        help="port, default: 20000")
+    parser.add_argument("--master-id=", action="store", default=2, type=int,
+                        metavar="<ID>",
+                        help="master id, default: 2")
+    parser.add_argument("--outstation-id=", action="store", default=1, type=int,
+                        metavar="<ID>",
+                        help="master id, default: 1")
 
     return parser
 
 
 def print_menu():
-    welcome_str = """
+    welcome_str = """\
 ==== Outstation Operation MENU ==================================
 <ai> - update analog-input point value (for local reading)
 <ao> - update analog-output point value (for local control)
@@ -113,13 +54,12 @@ def print_menu():
 <bo> - update binary-output point value (for local control)
 <dd> - display database
 <dc> - display configuration
-<sc> - take a screenshot of the current database point values
-<q>  - quit the program
-================================================================="""
+=================================================================\
+"""
     print(welcome_str)
 
-
 def main(parser=None, *args, **kwargs):
+
     if parser is None:
         # Initialize parser
         parser = argparse.ArgumentParser(
@@ -136,68 +76,25 @@ def main(parser=None, *args, **kwargs):
     d_args = vars(args)
     print(__name__, d_args)
 
-    # db_sizes = opendnp3.DatabaseSizes.AllTypes(count=5)
-    db_sizes = opendnp3.DatabaseSizes(
-        numBinary=1,
-        numBinaryOutputStatus=6,
-        numDoubleBinary=2,
-        numAnalog=3,
-        numAnalogOutputStatus=7,
-        numCounter=4,
-        numFrozenCounter=5,
-        numTimeAndInterval=8,
-    )
-    # db_sizes = opendnp3.DatabaseSizes(1,
-    #                                   2,
-
-    #                                   3,
-    #                                   4,
-    #                                   5,
-    #                                   6,
-    #                                   7,
-
-    #                                   8)
-
-    outstation_application = MyOutStation(
+    outstation_application = MyOutStationNew(
         # masterstation_ip_str=args.master_ip,
         outstation_ip=d_args.get("outstation_ip="),
         port=d_args.get("port="),
         master_id=d_args.get("master_id="),
         outstation_id=d_args.get("outstation_id="),
-        # db_sizes=db_sizes,
+
         # channel_log_level=opendnp3.levels.ALL_COMMS,
         # master_log_level=opendnp3.levels.ALL_COMMS
         # soe_handler=SOEHandler(soehandler_log_level=logging.DEBUG)
-        numAnalog=d_args.get("n_ai="),
-        numAnalogOutputStatus=d_args.get("n_ao="),
-        numBinary=d_args.get("n_bi="),
-        numBinaryOutputStatus=d_args.get("n_bo="),
     )
     _log.info("Connection Config", outstation_application.get_config())
     outstation_application.start()
-    _log.debug("Initialization complete. Outstation in command loop.")
+    _log.debug('Initialization complete. Outstation in command loop.')
 
     sleep(3)
     # Note: if without sleep(2) there will be a glitch when first send_select_and_operate_command
     #  (i.e., all the values are zero, [(0, 0.0), (1, 0.0), (2, 0.0), (3, 0.0)]))
     #  since it would not update immediately
-
-    # Additional init for demo purposes
-    # if d_args.get("init_random")==True, init with random values
-    if d_args.get("init_random"):
-        db_sizes = outstation_application.db_sizes
-        for n in range(db_sizes.numBinary):
-            val = random.choice([True, False])
-            outstation_application.apply_update(opendnp3.Binary(val), n)
-        for n in range(db_sizes.numBinaryOutputStatus):
-            val = random.choice([True, False])
-            outstation_application.apply_update(opendnp3.BinaryOutputStatus(val), n)
-        for n in range(db_sizes.numAnalog):
-            val = random.random() * pow(10, n)
-            outstation_application.apply_update(opendnp3.Analog(val), n)
-        for n in range(db_sizes.numAnalogOutputStatus):
-            val = random.random() * pow(10, n)
-            outstation_application.apply_update(opendnp3.AnalogOutputStatus(val), n)
 
     count = 0
     while count < 1000:
@@ -206,92 +103,56 @@ def main(parser=None, *args, **kwargs):
         count += 1
         # print(f"=========== Count {count}")
 
-        # if outstation_application.is_connected:
-        #     # print("Communication Config", master_application.get_config())
-        #     print_menu()
-        # else:
-        #     # Note: even not connected, still allow the CLI enter the main menu.
-        #     print("Connection error.")
-        #     print("Connection Config", outstation_application.get_config())
-        #     # print("Start retry...")
-        #     # sleep(2)
-        #     # continue
-        #     print_menu()
-        #     # print("!!!!!!!!! WARNING: The outstation is NOT connected !!!!!!!!!")
-
-        print_menu()
-        print()
         if outstation_application.is_connected:
-            option = input_prompt(
-                menu_indicator="Main Menu"
-            )  # Note: one of ["ai", "ao", "bi", "bo",  "dd", "dc"]
+            # print("Communication Config", master_application.get_config())
+            print_menu()
         else:
-            option = input_prompt(
-                prefix="!!!!!!!!! WARNING: The Outstation is NOT connected !!!!!!!!!\n",
-                menu_indicator="Main Menu",
-            )
+            print("Connection error.")
+            print("Connection Config", outstation_application.get_config())
+            print("Start retry...")
+            sleep(2)
+            continue
 
+        option = input_prompt()  # Note: one of ["ai", "ao", "bi", "bo",  "dd", "dc"]
         while True:
             if option == "ai":
-                print(
-                    "You chose <ai> - update analog-input point value (for local reading)"
-                )
-                print(
-                    "Type in <float> and <index>. Separate with space, then hit ENTER. e.g., `1.4321, 1`."
-                )
+                print("You chose <ai> - update analog-input point value (for local reading)")
+                print("Type in <float> and <index>. Separate with space, then hit ENTER.")
                 print("Type 'q', 'quit', 'exit' to main menu.")
-                input_str = input_prompt(menu_indicator="<ai>")
+                input_str = input_prompt()
                 if input_str in ["q", "quit", "exit"]:
                     break
                 try:
                     p_val = float(input_str.split(" ")[0])
                     index = int(input_str.split(" ")[1])
-                    outstation_application.apply_update(
-                        opendnp3.Analog(value=p_val), index
-                    )
-                    result = {
-                        "Analog": outstation_application.db_handler.db.get("Analog")
-                    }
+                    outstation_application.apply_update(opendnp3.Analog(value=p_val), index)
+                    result = {"Analog": outstation_application.db_handler.db.get("Analog")}
                     print(result)
                     sleep(2)
                 except Exception as e:
                     print(f"your input string '{input_str}'")
                     print(e)
             elif option == "ao":
-                print(
-                    "You chose <ao> - update analog-output point value (for local control)"
-                )
-                print(
-                    "Type in <float> and <index>. Separate with space, then hit ENTER. e.g., `0.1234, 0`."
-                )
+                print("You chose <ao> - update analog-output point value (for local control)")
+                print("Type in <float> and <index>. Separate with space, then hit ENTER.")
                 print("Type 'q', 'quit', 'exit' to main menu.")
-                input_str = input_prompt(menu_indicator="<ao>")
+                input_str = input_prompt()
                 if input_str in ["q", "quit", "exit"]:
                     break
                 try:
                     p_val = float(input_str.split(" ")[0])
                     index = int(input_str.split(" ")[1])
-                    outstation_application.apply_update(
-                        opendnp3.AnalogOutputStatus(value=p_val), index
-                    )
-                    result = {
-                        "AnalogOutputStatus": outstation_application.db_handler.db.get(
-                            "AnalogOutputStatus"
-                        )
-                    }
+                    outstation_application.apply_update(opendnp3.AnalogOutputStatus(value=p_val), index)
+                    result = {"AnalogOutputStatus": outstation_application.db_handler.db.get("AnalogOutputStatus")}
                     print(result)
                     sleep(2)
                 except Exception as e:
                     print(f"your input string '{input_str}'")
                     print(e)
             elif option == "bi":
-                print(
-                    "You chose <bi> - update binary-input point value (for local reading)"
-                )
-                print(
-                    "Type in <[1/0]> and <index>. Separate with space, then hit ENTER. e.g., `1 0`."
-                )
-                input_str = input_prompt(menu_indicator="<bi>")
+                print("You chose <bi> - update binary-input point value (for local reading)")
+                print("Type in <[1/0]> and <index>. Separate with space, then hit ENTER.")
+                input_str = input_prompt()
                 if input_str in ["q", "quit", "exit"]:
                     break
                 try:
@@ -301,25 +162,17 @@ def main(parser=None, *args, **kwargs):
                     else:
                         p_val = True if p_val_input == "1" else False
                     index = int(input_str.split(" ")[1])
-                    outstation_application.apply_update(
-                        opendnp3.Binary(value=p_val), index
-                    )
-                    result = {
-                        "Binary": outstation_application.db_handler.db.get("Binary")
-                    }
+                    outstation_application.apply_update(opendnp3.Binary(value=p_val), index)
+                    result = {"Binary": outstation_application.db_handler.db.get("Binary")}
                     print(result)
                     sleep(2)
                 except Exception as e:
                     print(f"your input string '{input_str}'")
                     print(e)
             elif option == "bo":
-                print(
-                    "You chose <bo> - update binary-output point value (for local control)"
-                )
-                print(
-                    "Type in <[1/0]> and <index>. Separate with space, then hit ENTER. e.g., `1 0`."
-                )
-                input_str = input_prompt(menu_indicator="<bo>")
+                print("You chose <bo> - update binary-output point value (for local control)")
+                print("Type in <[1/0]> and <index>. Separate with space, then hit ENTER.")
+                input_str = input_prompt()
                 if input_str in ["q", "quit", "exit"]:
                     break
                 try:
@@ -329,14 +182,8 @@ def main(parser=None, *args, **kwargs):
                     else:
                         p_val = True if p_val_input == "1" else False
                     index = int(input_str.split(" ")[1])
-                    outstation_application.apply_update(
-                        opendnp3.BinaryOutputStatus(value=p_val), index
-                    )
-                    result = {
-                        "BinaryOutputStatus": outstation_application.db_handler.db.get(
-                            "BinaryOutputStatus"
-                        )
-                    }
+                    outstation_application.apply_update(opendnp3.BinaryOutputStatus(value=p_val), index)
+                    result = {"BinaryOutputStatus": outstation_application.db_handler.db.get("BinaryOutputStatus")}
                     print(result)
                     sleep(2)
                 except Exception as e:
@@ -345,44 +192,23 @@ def main(parser=None, *args, **kwargs):
             elif option == "dd":
                 print("You chose < dd > - display database")
                 db_print = outstation_application.db_handler.db
-                # print(db_print)
-
-                # print(tabulate(to_flat_db(db_print), headers="keys", tablefmt="grid"))
-                print(
-                    tabulate(to_pnnl_schema(db_print), headers="keys", tablefmt="grid")
-                )
-
+                print(db_print)
                 sleep(2)
                 break
             elif option == "dc":
-                print("You chose < dc > - display configuration")
+                print("You chose < dc> - display configuration")
                 print(outstation_application.get_config())
                 sleep(3)
                 break
-            elif option == "sc":
-                print(
-                    "You chose < sc > - take a screenshot of the current database point values"
-                )
-                db_print = outstation_application.db_handler.db
-                df_save = to_pnnl_schema(db_print, is_wrapped_text=False)
-                p_save = f'/tmp/dnp3_db_screenshot_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
-                df_save.to_csv(p_save)
-                print(f"The database screenshot has been saved to {p_save}.")
-                sleep(3)
-                break
-            elif option == "q":
-                print("Stopping Outstation")
-                _log.debug("Exiting.")
-                outstation_application.shutdown()
-                sys.exit(0)
             else:
                 print(f"ERROR- your input `{option}` is not one of the following.")
                 sleep(1)
                 break
 
-    # _log.debug('Exiting.')
+    _log.debug('Exiting.')
+    outstation_application.shutdown()
     # outstation_application.shutdown()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

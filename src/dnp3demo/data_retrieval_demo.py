@@ -1,18 +1,17 @@
-import datetime
 import logging
 import random
 import sys
-from time import sleep
 
 from pydnp3 import opendnp3
 
-from dnp3_python.dnp3station.master import MyMaster
-from dnp3_python.dnp3station.outstation import MyOutStation
+from dnp3_python.dnp3station.master_new import MyMasterNew
+from dnp3_python.dnp3station.outstation_new import MyOutStationNew
+
+import datetime
+from time import sleep
 
 stdout_stream = logging.StreamHandler(sys.stdout)
-stdout_stream.setFormatter(
-    logging.Formatter("%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s")
-)
+stdout_stream.setFormatter(logging.Formatter('%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s'))
 
 _log = logging.getLogger(__name__)
 # _log = logging.getLogger("data_retrieval_demo")
@@ -22,25 +21,21 @@ _log.setLevel(logging.DEBUG)
 
 def main():
     # init an outstation using default configuration, e.g., port=20000. Then start.
-    outstation_application = MyOutStation()
+    outstation_application = MyOutStationNew()
     outstation_application.start()
-    _log.debug("Initialization complete. OutStation in command loop.")
+    _log.debug('Initialization complete. OutStation in command loop.')
 
     # init a master using default configuration, e.g., port=20000. Then start.
-    master_application = MyMaster()
+    master_application = MyMasterNew()
     master_application.start()
-    _log.debug("Initialization complete. Master Station in command loop.")
+    _log.debug('Initialization complete. Master Station in command loop.')
 
     count = 0
     while count < 10:
         sleep(2)  # Note: hard-coded, master station query every 1 sec.
 
         count += 1
-        print(
-            datetime.datetime.now(),
-            "============count ",
-            count,
-        )
+        print(datetime.datetime.now(), "============count ", count, )
 
         # plan: there are 3 AnalogInput Points,
         # outstation will randomly pick from
@@ -59,26 +54,7 @@ def main():
             for i, pts in enumerate([point_values_0, point_values_1, point_values_2]):
                 p_val = random.choice(pts)
                 print(f"====== Outstation update index {i} with {p_val}")
-                import time
-
-                current_time_millis = int(round(time.time() * 1000))
-                flags = opendnp3.Flags(i)
-                dnp_time = opendnp3.DNPTime(current_time_millis)
-                measurement = opendnp3.Analog(
-                    value=float(p_val), flags=flags, time=dnp_time
-                )
-                outstation_application.apply_update(measurement, i)
-                print(
-                    "==========Recording {} measurement, index={}, "
-                    "value={}, flag={}, time={}, datetime={}".format(
-                        type(measurement),
-                        i,
-                        measurement.value,
-                        measurement.flags.value,
-                        measurement.time.value,
-                        datetime.datetime.fromtimestamp(measurement.time.value / 1000),
-                    )
-                )
+                outstation_application.apply_update(opendnp3.Analog(value=float(p_val)), i)
 
         if count % 2 == 1:
             point_values_0 = [True, False]
@@ -104,26 +80,17 @@ def main():
         #                                                               opendnp3.GroupVariationID(1, 2)])
         # result = master_application.retrieve_val_by_gv(gv_id=opendnp3.GroupVariationID(30, 6),)
         result = master_application.get_db_by_group_variation(group=30, variation=6)
-        print(
-            f"===important log: case6 get_db_by_group_variation(group=30, variation=6) ==== {count}",
-            "\n",
-            datetime.datetime.now(),
-            result,
-        )
+        print(f"===important log: case6 get_db_by_group_variation(group=30, variation=6) ==== {count}", "\n",
+              datetime.datetime.now(),
+              result)
         result = master_application.get_db_by_group_variation(group=1, variation=2)
-        print(
-            f"===important log: case6b get_db_by_group_variation(group=1, variation=2) ==== {count}",
-            "\n",
-            datetime.datetime.now(),
-            result,
-        )
+        print(f"===important log: case6b get_db_by_group_variation(group=1, variation=2) ==== {count}", "\n",
+              datetime.datetime.now(),
+              result)
         result = master_application.get_db_by_group_variation(group=30, variation=1)
-        print(
-            f"===important log: case6c get_db_by_group_variation(group=30, variation=1) ==== {count}",
-            "\n",
-            datetime.datetime.now(),
-            result,
-        )
+        print(f"===important log: case6c get_db_by_group_variation(group=30, variation=1) ==== {count}", "\n",
+              datetime.datetime.now(),
+              result)
 
         # # use case 7: retrieve point values specified by single GroupVariationIDs and index.
         # # demo float AnalogInput,
@@ -139,10 +106,10 @@ def main():
         #       datetime.datetime.now(),
         #       result)
 
-    _log.debug("Exiting.")
+    _log.debug('Exiting.')
     master_application.shutdown()
     outstation_application.shutdown()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
