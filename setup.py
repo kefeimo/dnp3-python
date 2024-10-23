@@ -36,24 +36,37 @@
 # under Contract DE-AC05-76RL01830
 # }}}
 
-import sys
 import os
-import subprocess
-import re
 import platform
-
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
+import re
+import subprocess
+import sys
 from distutils.version import LooseVersion
-
-from setuptools import find_packages, find_namespace_packages
 from pathlib import Path
 
-__version__ = '0.3.0b1'
+from setuptools import Extension, find_namespace_packages, find_packages, setup
+from setuptools.command.build_ext import build_ext
+
+module_name = "dnp3_python"
+
+
+# Function to extract version from the __init__.py file at /src
+def find_version():
+    here = os.path.abspath(os.path.dirname(__file__))
+    with open(os.path.join(here, "src", module_name, "__init__.py"), "r") as f:
+        contents = f.read()
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", contents, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
+
+
+__version__ = find_version()
+print(f"{__version__=}")
 
 
 class CMakeExtension(Extension):
-    def __init__(self, name, sourcedir=''):
+    def __init__(self, name, sourcedir=""):
         Extension.__init__(self, name, sources=[])
         self.sourcedir = os.path.abspath(sourcedir)
 
@@ -61,14 +74,18 @@ class CMakeExtension(Extension):
 class CMakeBuild(build_ext):
     def run(self):
         try:
-            out = subprocess.check_output(['cmake', '--version'])
+            out = subprocess.check_output(["cmake", "--version"])
         except OSError:
-            raise RuntimeError("CMake must be installed to build the following extensions: " +
-                               ", ".join(e.name for e in self.extensions))
+            raise RuntimeError(
+                "CMake must be installed to build the following extensions: "
+                + ", ".join(e.name for e in self.extensions)
+            )
 
         if platform.system() == "Windows":
-            cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)', out.decode()).group(1))
-            if cmake_version < '3.1.0':
+            cmake_version = LooseVersion(
+                re.search(r"version\s*([\d.]+)", out.decode()).group(1)
+            )
+            if cmake_version < "3.1.0":
                 raise RuntimeError("CMake >= 3.1.0 is required on Windows")
 
         for ext in self.extensions:
@@ -76,25 +93,30 @@ class CMakeBuild(build_ext):
 
     def build_extension(self, ext):
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
-        cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
-                      '-DPYTHON_EXECUTABLE=' + sys.executable]
+        cmake_args = [
+            "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=" + extdir,
+            "-DPYTHON_EXECUTABLE=" + sys.executable,
+        ]
 
-        cfg = 'Debug' if self.debug else 'Release'
-        build_args = ['--config', cfg]
+        cfg = "Debug" if self.debug else "Release"
+        build_args = ["--config", cfg]
 
         if platform.system() == "Windows":
-            cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir)]
+            cmake_args += [
+                "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}".format(cfg.upper(), extdir)
+            ]
             if sys.maxsize > 2**32:
-                cmake_args += ['-A', 'x64']
-            build_args += ['--', '/m']
+                cmake_args += ["-A", "x64"]
+            build_args += ["--", "/m"]
         else:
-            cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
-            cmake_args += ['-DSTATICLIBS=ON']
-            build_args += ['--', '-j2']
+            cmake_args += ["-DCMAKE_BUILD_TYPE=" + cfg]
+            cmake_args += ["-DSTATICLIBS=ON"]
+            build_args += ["--", "-j2"]
 
         env = os.environ.copy()
-        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
-                                                              self.distribution.get_version())
+        env["CXXFLAGS"] = '{} -DVERSION_INFO=\\"{}\\"'.format(
+            env.get("CXXFLAGS", ""), self.distribution.get_version()
+        )
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
@@ -106,37 +128,41 @@ class CMakeBuild(build_ext):
         #
         #     subprocess.check_call(['git', 'apply', patch_path], cwd=dnp3_path)
 
-        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
-        subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
+        subprocess.check_call(
+            ["cmake", ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env
+        )
+        subprocess.check_call(
+            ["cmake", "--build", "."] + build_args, cwd=self.build_temp
+        )
 
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 setup(
-    name='dnp3-python',
+    name="dnp3-python",
     version=__version__,
-    author='Volttron Team',
-    author_email='volttron@pnnl.gov',
-    url='https://github.com/VOLTTRON/dnp3-python',
-    description='pydnp3 -- python binding for opendnp3',
+    author="Volttron Team",
+    author_email="volttron@pnnl.gov",
+    url="https://github.com/VOLTTRON/dnp3-python",
+    description="pydnp3 -- python binding for opendnp3",
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     install_requires=[
         # 'pybind11>=2.2',
-        'argcomplete'],
-    ext_modules=[CMakeExtension('pydnp3')],
+        "argcomplete"
+    ],
+    ext_modules=[CMakeExtension("pydnp3")],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
-
     packages=find_namespace_packages(
-        where='src',
-        include=['dnp3_python*', 'dnp3demo']  # to include sub-packages as well.
+        where="src",
+        include=[f"{module_name}*", "dnp3demo"],  # to include sub-packages as well.
     ),
     package_dir={"": "src"},
     entry_points={
-                'console_scripts': [
-                    'dnp3demo = dnp3demo.__main__:main',
-                ]
-            },
+        "console_scripts": [
+            "dnp3demo = dnp3demo.__main__:main",
+        ]
+    },
 )
