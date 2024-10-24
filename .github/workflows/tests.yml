@@ -1,4 +1,4 @@
-name: Install Package Test
+name: Pytests
 
 on:
   push:
