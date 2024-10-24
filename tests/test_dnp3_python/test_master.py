@@ -49,8 +49,6 @@ def test_send_direct_point_command(master_new, outstation_new):
     index = 1
     value_to_set = 12.34
 
-    # Verify the results
-    # Assuming the MyMasterNew class has a method to fetch the latest command's response or status
     for i in range(10):
         master_new.send_direct_point_command(
             group=group, variation=variation, index=index, val_to_set=value_to_set
