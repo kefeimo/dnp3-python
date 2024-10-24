@@ -44,7 +44,7 @@ jobs:
 
     - name: Run Tests
       run: |
-        pytest -s /tests/test_dnp3_python/*
+        pytest -s -vv /tests/test_dnp3_python/*
       env:
         PYTHONPATH: ${{ github.workspace }}
 
