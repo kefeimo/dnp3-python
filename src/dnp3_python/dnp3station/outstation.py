@@ -79,11 +79,11 @@ class MyOutStation(opendnp3.IOutstationApplication):
 
     def __init__(
         self,
-        outstation_ip: str = "0.0.0.0",
-        port: int = 20000,
-        master_id: int = 2,
-        outstation_id: int = 1,
-        concurrency_hint: int = 1,
+        outstation_ip: str | None = "0.0.0.0",
+        port: int | None = 20000,
+        master_id: int | None = 2,
+        outstation_id: int | None = 1,
+        concurrency_hint: int | None = 1,
         channel_log_level=opendnp3.levels.NORMAL,
         outstation_log_level=opendnp3.levels.NORMAL,
         db_sizes: opendnp3.DatabaseSizes = None,
@@ -337,7 +337,7 @@ class MyOutStation(opendnp3.IOutstationApplication):
         Configure two Binary points (group/variation 1.2) at indexes 1 and 2.
         """
 
-        _log.info("======== configure_database")
+        # _log.info("======== configure_database")
         # AnalogInput
         db_config.analog[0].clazz = opendnp3.PointClass.Class2
         # db_config.analog[0].svariation = opendnp3.StaticAnalogVariation.Group30Var1

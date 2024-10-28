@@ -6,16 +6,16 @@ import pytest
 from pydnp3 import opendnp3
 from utils import get_free_port
 
-from dnp3_python.dnp3station.master_new import MyMasterNew
-from dnp3_python.dnp3station.outstation_new import MyOutStationNew
+from dnp3_python.dnp3station.master import MyMaster
+from dnp3_python.dnp3station.outstation import MyOutStation
 
 PORT = get_free_port()
 
 
 @pytest.fixture(scope="function")
-def master_new() -> Generator[MyMasterNew, None, None]:
+def master_new() -> Generator[MyMaster, None, None]:
     # master = MyMasterNew()
-    master = MyMasterNew(
+    master = MyMaster(
         master_ip="0.0.0.0",
         outstation_ip="127.0.0.1",
         port=PORT,
@@ -28,9 +28,9 @@ def master_new() -> Generator[MyMasterNew, None, None]:
 
 
 @pytest.fixture(scope="module")
-def outstation_new() -> Generator[MyOutStationNew, None, None]:
+def outstation_new() -> Generator[MyOutStation, None, None]:
     # outstation = MyOutStationNew()
-    outstation = MyOutStationNew(
+    outstation = MyOutStation(
         outstation_ip="0.0.0.0",
         port=PORT,
         master_id=2,

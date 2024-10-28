@@ -1,7 +1,8 @@
 """
-    The master uses these data-type-specific Visitor class definitions
-    when it processes measurements received from the outstation.
+The master uses these data-type-specific Visitor class definitions
+when it processes measurements received from the outstation.
 """
+
 from pydnp3 import opendnp3
 
 
@@ -11,7 +12,9 @@ class VisitorIndexedBinary(opendnp3.IVisitorIndexedBinary):
         self.index_and_value = []
 
     def OnValue(self, indexed_instance):
-        self.index_and_value.append((indexed_instance.index, indexed_instance.value.value))
+        self.index_and_value.append(
+            (indexed_instance.index, indexed_instance.value.value)
+        )
 
 
 class VisitorIndexedDoubleBitBinary(opendnp3.IVisitorIndexedDoubleBitBinary):
@@ -20,7 +23,9 @@ class VisitorIndexedDoubleBitBinary(opendnp3.IVisitorIndexedDoubleBitBinary):
         self.index_and_value = []
 
     def OnValue(self, indexed_instance):
-        self.index_and_value.append((indexed_instance.index, indexed_instance.value.value))
+        self.index_and_value.append(
+            (indexed_instance.index, indexed_instance.value.value)
+        )
 
 
 class VisitorIndexedCounter(opendnp3.IVisitorIndexedCounter):
@@ -29,7 +34,9 @@ class VisitorIndexedCounter(opendnp3.IVisitorIndexedCounter):
         self.index_and_value = []
 
     def OnValue(self, indexed_instance):
-        self.index_and_value.append((indexed_instance.index, indexed_instance.value.value))
+        self.index_and_value.append(
+            (indexed_instance.index, indexed_instance.value.value)
+        )
 
 
 class VisitorIndexedFrozenCounter(opendnp3.IVisitorIndexedFrozenCounter):
@@ -38,25 +45,35 @@ class VisitorIndexedFrozenCounter(opendnp3.IVisitorIndexedFrozenCounter):
         self.index_and_value = []
 
     def OnValue(self, indexed_instance):
-        self.index_and_value.append((indexed_instance.index, indexed_instance.value.value))
+        self.index_and_value.append(
+            (indexed_instance.index, indexed_instance.value.value)
+        )
 
 
 class VisitorIndexedAnalog(opendnp3.IVisitorIndexedAnalog):
     def __init__(self):
         super(VisitorIndexedAnalog, self).__init__()
         self.index_and_value = []
+        self.index_and_instance = []
 
     def OnValue(self, indexed_instance):
-        self.index_and_value.append((indexed_instance.index, indexed_instance.value.value))
+        self.index_and_value.append(
+            (indexed_instance.index, indexed_instance.value.value)
+        )
+        self.index_and_instance.append((indexed_instance.index, indexed_instance))
 
 
 class VisitorIndexedAnalogInt(VisitorIndexedAnalog):
     def __init__(self):
         super(VisitorIndexedAnalogInt, self).__init__()
         self.index_and_value = []
+        self.index_and_instance = []
 
     def OnValue(self, indexed_instance):
-        self.index_and_value.append((indexed_instance.index, int(indexed_instance.value.value)))
+        self.index_and_value.append(
+            (indexed_instance.index, int(indexed_instance.value.value))
+        )
+        self.index_and_instance.append((indexed_instance.index, indexed_instance))
 
 
 class VisitorIndexedBinaryOutputStatus(opendnp3.IVisitorIndexedBinaryOutputStatus):
@@ -65,7 +82,9 @@ class VisitorIndexedBinaryOutputStatus(opendnp3.IVisitorIndexedBinaryOutputStatu
         self.index_and_value = []
 
     def OnValue(self, indexed_instance):
-        self.index_and_value.append((indexed_instance.index, indexed_instance.value.value))
+        self.index_and_value.append(
+            (indexed_instance.index, indexed_instance.value.value)
+        )
 
 
 class VisitorIndexedAnalogOutputStatus(opendnp3.IVisitorIndexedAnalogOutputStatus):
@@ -74,7 +93,9 @@ class VisitorIndexedAnalogOutputStatus(opendnp3.IVisitorIndexedAnalogOutputStatu
         self.index_and_value = []
 
     def OnValue(self, indexed_instance):
-        self.index_and_value.append((indexed_instance.index, indexed_instance.value.value))
+        self.index_and_value.append(
+            (indexed_instance.index, indexed_instance.value.value)
+        )
 
 
 class VisitorIndexedAnalogOutputStatusInt(VisitorIndexedAnalogOutputStatus):
@@ -83,7 +104,9 @@ class VisitorIndexedAnalogOutputStatusInt(VisitorIndexedAnalogOutputStatus):
         self.index_and_value = []
 
     def OnValue(self, indexed_instance):
-        self.index_and_value.append((indexed_instance.index, int(indexed_instance.value.value)))
+        self.index_and_value.append(
+            (indexed_instance.index, int(indexed_instance.value.value))
+        )
 
 
 class VisitorIndexedTimeAndInterval(opendnp3.IVisitorIndexedTimeAndInterval):
@@ -96,4 +119,6 @@ class VisitorIndexedTimeAndInterval(opendnp3.IVisitorIndexedTimeAndInterval):
         ti_instance = indexed_instance.value
         ti_dnptime = ti_instance.time
         ti_interval = ti_instance.interval
-        self.index_and_value.append((indexed_instance.index, (ti_dnptime.value, ti_interval)))
+        self.index_and_value.append(
+            (indexed_instance.index, (ti_dnptime.value, ti_interval))
+        )

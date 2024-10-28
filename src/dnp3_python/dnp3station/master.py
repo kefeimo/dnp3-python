@@ -63,12 +63,12 @@ class MyMaster:
 
     def __init__(
         self,
-        master_ip: str = "0.0.0.0",
-        outstation_ip: str = "127.0.0.1",
-        port: int = 20000,
-        master_id: int = 2,
-        outstation_id: int = 1,
-        concurrency_hint: int = 1,
+        master_ip: str | None = "0.0.0.0",
+        outstation_ip: str | None = "127.0.0.1",
+        port: int | None = 20000,
+        master_id: int | None = 2,
+        outstation_id: int | None = 1,
+        concurrency_hint: int | None = 1,
         log_handler=asiodnp3.ConsoleLogger().Create(),
         listener=asiodnp3.PrintingChannelListener().Create(),
         soe_handler=SOEHandler(),
@@ -316,7 +316,7 @@ class MyMaster:
         :rtype: Dict[opendnp3.GroupVariation, Dict[int, DbPointVal]]
 
         """
-        gv_ids: Optional[List[opendnp3.GroupVariationID]]
+        # gv_ids: Optional[List[opendnp3.GroupVariationID]]
         if gv_ids is None:  # using default
             gv_ids = [
                 GroupVariationID(30, 6),
@@ -374,7 +374,7 @@ class MyMaster:
         # val_storage: ValStorage = self.soe_handler.gv_ts_ind_val_dict.get(gv_cls)
         # val_storage = self.soe_handler.gv_last_poll_dict.get(gv_cls), self.soe_handler.gv_index_value_nested_dict.get(
         #     gv_cls)
-        ret_val: {opendnp3.GroupVariation: Dict[int, DbPointVal]}
+        ret_val: Dict[opendnp3.GroupVariation, Dict[int, DbPointVal]]
 
         ts = self.soe_handler.gv_last_poll_dict.get(gv_cls)
         stale_if_longer_than = self.stale_if_longer_than
