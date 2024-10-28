@@ -12,7 +12,7 @@ from dnp3_python.dnp3station.outstation_new import MyOutStationNew
 PORT = get_free_port()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def master_new() -> Generator[MyMasterNew, None, None]:
     # master = MyMasterNew()
     master = MyMasterNew(
@@ -27,7 +27,7 @@ def master_new() -> Generator[MyMasterNew, None, None]:
     master.shutdown()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def outstation_new() -> Generator[MyOutStationNew, None, None]:
     # outstation = MyOutStationNew()
     outstation = MyOutStationNew(
@@ -43,8 +43,23 @@ def outstation_new() -> Generator[MyOutStationNew, None, None]:
     outstation.shutdown()
 
 
-# Test function to verify send_scan_all_request
-def test_send_scan_all_request(master_new, outstation_new):
+# Test function to verify that sending a direct point command works as expected
+def test_apply_update(master_new, outstation_new):
+    # Setup the conditions for the test (e.g., known state of the outstation)
+    value = 0.1234
+    index = 1
+    outstation_new.apply_update(opendnp3.Analog(value=value), index)
+
+    for i in range(10):
+        result = outstation_new.db_handler.db
+        print(f"{i=}, {result=}")
+        if result["Analog"][index] != 0:
+            break
+        sleep(1)
+
+
+# Test function to verify that sending a direct point command works as expected
+def test_send_scan_all_request_passive(master_new, outstation_new):
     # Setup the conditions for the test (e.g., known state of the outstation)
     value = 0.1234
     index = 0
@@ -53,40 +68,8 @@ def test_send_scan_all_request(master_new, outstation_new):
     for i in range(10):
         master_new.send_scan_all_request()
         sleep(1)
-        result = master_new.soe_handler.db
-        print(f"{i=}, {result=}")
-        if result["Analog"][index] is not None:
+        result_master = master_new.soe_handler.db
+        print(f"{i=}, {result_master=}")
+        if result_master["Analog"][index] is not None:
             break
         sleep(1)
-
-    # expected_result = {
-    #     "AnalogOutputStatus": [(index, value_to_set)]
-    # }  # Example expected result format
-    # assert result == expected_result, f"Expected {expected_result}, got {result}"
-
-
-# Test function to verify send_direct_point_command
-def test_send_direct_point_command(master_new, outstation_new):
-    # Setup the conditions for the test (e.g., known state of the outstation)
-    group = 40
-    variation = 4
-    index = 1
-    value_to_set = 12.34
-
-    for i in range(10):
-        master_new.send_direct_point_command(
-            group=group, variation=variation, index=index, val_to_set=value_to_set
-        )
-        sleep(1)
-        master_new.get_db_by_group_variation(group=group, variation=variation)
-        sleep(1)
-        result = master_new.soe_handler.db["AnalogOutputStatus"]
-        print(f"{i=}, {result=}")
-        if result[index] is not None:
-            break
-        sleep(1)
-
-    # expected_result = {
-    #     "AnalogOutputStatus": [(index, value_to_set)]
-    # }  # Example expected result format
-    # assert result == expected_result, f"Expected {expected_result}, got {result}"
