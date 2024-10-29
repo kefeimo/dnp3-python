@@ -763,6 +763,9 @@ class MasterApplication:
     def db(self) -> Dnp3Database:
         return Dnp3Database(self.my_master.soe_handler.db)
 
+    def get_config(self):
+        return self.my_master.get_config()
+
     def send_scan_all_request(
         self, gv_ids: List[opendnp3.GroupVariationID] | None = None
     ):

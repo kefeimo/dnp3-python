@@ -6,7 +6,7 @@ import pytest
 from pydnp3 import opendnp3
 from utils import get_free_port
 
-from dnp3_python.dnp3station.master import MyMaster
+from dnp3_python.dnp3station.master import MasterApplication
 from dnp3_python.dnp3station.outstation import OutStationApplication
 
 PORT = get_free_port()
@@ -14,8 +14,8 @@ NUMBER_OF_DB_POINTS = 10
 
 
 @pytest.fixture(scope="module")
-def master_new() -> Generator[MyMaster, None, None]:
-    master = MyMaster(
+def master_new() -> Generator[MasterApplication, None, None]:
+    master = MasterApplication(
         master_ip="0.0.0.0",
         outstation_ip="127.0.0.1",
         port=PORT,
@@ -56,6 +56,17 @@ def test_apply_update(master_new, outstation_app):
         result = outstation_app.db
         print(f"{i=}, {result=}")
         if result.Analog[index] != 0:
+            break
+        sleep(1)
+
+
+def test_update_db_with_random(master_new, outstation_app):
+    outstation_app.update_db_with_random()
+
+    for i in range(10):
+        result = outstation_app.db
+        print(f"{i=}, {result=}")
+        if result.Analog[0] != 0:
             break
         sleep(1)
 

@@ -5,7 +5,7 @@ import sys
 from datetime import datetime
 from time import sleep
 
-from dnp3_python.dnp3station.master import MyMaster
+from dnp3_python.dnp3station.master import MasterApplication
 from dnp3_python.dnp3station.station_utils import to_flat_db
 
 stdout_stream = logging.StreamHandler(sys.stdout)
@@ -104,7 +104,7 @@ def main(parser=None, *args, **kwargs):
     d_args = vars(args)
     print(__name__, d_args)
     # print(args.__dir__())
-    master_application = MyMaster(
+    master_application = MasterApplication(
         master_ip=d_args.get("master_ip="),
         outstation_ip=d_args.get("outstation_ip="),
         port=d_args.get("port="),
@@ -194,7 +194,7 @@ def main(parser=None, *args, **kwargs):
                 print("You chose < dd > - display database")
                 master_application.send_scan_all_request()
                 sleep(1)
-                db_print = master_application.soe_handler.db
+                db_print = master_application.db
                 print(db_print)
                 sleep(2)
                 break
@@ -207,21 +207,9 @@ def main(parser=None, *args, **kwargs):
                 print(
                     "You chose < sc > - take a screenshot of the current database point values"
                 )
-                db_print = master_application.soe_handler.db
+                db_print = master_application.db
                 p_save = f'/tmp/dnp3_db_screenshot_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
-                flat_dict = to_flat_db(db_print)
-                # Open the CSV file for writing
-                with open(p_save, mode="w", newline="") as file:
-                    # Create a CSV writer object
-                    writer = csv.writer(file)
-                    # Write the header (the keys of the dictionary)
-                    writer.writerow(flat_dict.keys())
-                    # Write the data rows
-                    # Transpose the values from the dictionary to rows in CSV
-                    writer.writerows(zip(*flat_dict.values()))
-                # df_save = to_pnnl_schema(db_print, is_wrapped_text=False)
-
-                # df_save.to_csv(p_save)
+                db_print.to_csv(p_save)
                 print(f"The database screenshot has been saved to {p_save}.")
                 sleep(3)
                 break

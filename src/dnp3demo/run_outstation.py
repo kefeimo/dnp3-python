@@ -9,7 +9,7 @@ from time import sleep
 from pydnp3 import opendnp3
 
 # from tabulate import tabulate
-from dnp3_python.dnp3station.outstation import MyOutStation
+from dnp3_python.dnp3station.outstation import OutStationApplication
 from dnp3_python.dnp3station.station_utils import Dnp3Database
 
 stdout_stream = logging.StreamHandler(sys.stdout)
@@ -139,41 +139,31 @@ def main(parser=None, *args, **kwargs):
     print(__name__, d_args)
 
     # db_sizes = opendnp3.DatabaseSizes.AllTypes(count=5)
-    db_sizes = opendnp3.DatabaseSizes(
-        numBinary=1,
-        numBinaryOutputStatus=6,
-        numDoubleBinary=2,
-        numAnalog=3,
-        numAnalogOutputStatus=7,
-        numCounter=4,
-        numFrozenCounter=5,
-        numTimeAndInterval=8,
-    )
-    # db_sizes = opendnp3.DatabaseSizes(1,
-    #                                   2,
+    # db_sizes = opendnp3.DatabaseSizes(
+    #     numBinary=1,
+    #     numBinaryOutputStatus=6,
+    #     numDoubleBinary=2,
+    #     numAnalog=3,
+    #     numAnalogOutputStatus=7,
+    #     numCounter=4,
+    #     numFrozenCounter=5,
+    #     numTimeAndInterval=8,
+    # )
 
-    #                                   3,
-    #                                   4,
-    #                                   5,
-    #                                   6,
-    #                                   7,
-
-    #                                   8)
-
-    outstation_application = MyOutStation(
+    outstation_application = OutStationApplication(
         # masterstation_ip_str=args.master_ip,
-        outstation_ip=d_args.get("outstation_ip="),
-        port=d_args.get("port="),
-        master_id=d_args.get("master_id="),
-        outstation_id=d_args.get("outstation_id="),
+        outstation_ip=args.get("outstation_ip="),
+        port=args.get("port="),
+        master_id=args.get("master_id="),
+        outstation_id=args.get("outstation_id="),
         # db_sizes=db_sizes,
         # channel_log_level=opendnp3.levels.ALL_COMMS,
         # master_log_level=opendnp3.levels.ALL_COMMS
         # soe_handler=SOEHandler(soehandler_log_level=logging.DEBUG)
-        numAnalog=d_args.get("n_ai="),
-        numAnalogOutputStatus=d_args.get("n_ao="),
-        numBinary=d_args.get("n_bi="),
-        numBinaryOutputStatus=d_args.get("n_bo="),
+        numAnalog=args.get("n_ai="),
+        numAnalogOutputStatus=args.get("n_ao="),
+        numBinary=args.get("n_bi="),
+        numBinaryOutputStatus=args.get("n_bo="),
     )
     _log.info("Connection Config", outstation_application.get_config())
     outstation_application.start()
@@ -186,40 +176,14 @@ def main(parser=None, *args, **kwargs):
 
     # Additional init for demo purposes
     # if d_args.get("init_random")==True, init with random values
-    if d_args.get("init_random"):
-        db_sizes = outstation_application.db_sizes
-        for n in range(db_sizes.numBinary):
-            val = random.choice([True, False])
-            outstation_application.apply_update(opendnp3.Binary(val), n)
-        for n in range(db_sizes.numBinaryOutputStatus):
-            val = random.choice([True, False])
-            outstation_application.apply_update(opendnp3.BinaryOutputStatus(val), n)
-        for n in range(db_sizes.numAnalog):
-            val = random.random() * pow(10, n)
-            outstation_application.apply_update(opendnp3.Analog(val), n)
-        for n in range(db_sizes.numAnalogOutputStatus):
-            val = random.random() * pow(10, n)
-            outstation_application.apply_update(opendnp3.AnalogOutputStatus(val), n)
+    if args.get("init_random"):
+        outstation_application.update_db_with_random()
 
     count = 0
     while count < 1000:
         # sleep(1)  # Note: hard-coded, master station query every 1 sec.
 
         count += 1
-        # print(f"=========== Count {count}")
-
-        # if outstation_application.is_connected:
-        #     # print("Communication Config", master_application.get_config())
-        #     print_menu()
-        # else:
-        #     # Note: even not connected, still allow the CLI enter the main menu.
-        #     print("Connection error.")
-        #     print("Connection Config", outstation_application.get_config())
-        #     # print("Start retry...")
-        #     # sleep(2)
-        #     # continue
-        #     print_menu()
-        #     # print("!!!!!!!!! WARNING: The outstation is NOT connected !!!!!!!!!")
 
         print_menu()
         print()
@@ -251,9 +215,7 @@ def main(parser=None, *args, **kwargs):
                     outstation_application.apply_update(
                         opendnp3.Analog(value=p_val), index
                     )
-                    result = {
-                        "Analog": outstation_application.db_handler.db.get("Analog")
-                    }
+                    result = {"Analog": outstation_application.db.Analog}
                     print(result)
                     sleep(2)
                 except Exception as e:
@@ -277,9 +239,7 @@ def main(parser=None, *args, **kwargs):
                         opendnp3.AnalogOutputStatus(value=p_val), index
                     )
                     result = {
-                        "AnalogOutputStatus": outstation_application.db_handler.db.get(
-                            "AnalogOutputStatus"
-                        )
+                        "AnalogOutputStatus": outstation_application.db.AnalogOutputStatus
                     }
                     print(result)
                     sleep(2)
@@ -306,9 +266,7 @@ def main(parser=None, *args, **kwargs):
                     outstation_application.apply_update(
                         opendnp3.Binary(value=p_val), index
                     )
-                    result = {
-                        "Binary": outstation_application.db_handler.db.get("Binary")
-                    }
+                    result = {"Binary": outstation_application.db.Binary}
                     print(result)
                     sleep(2)
                 except Exception as e:
@@ -335,9 +293,7 @@ def main(parser=None, *args, **kwargs):
                         opendnp3.BinaryOutputStatus(value=p_val), index
                     )
                     result = {
-                        "BinaryOutputStatus": outstation_application.db_handler.db.get(
-                            "BinaryOutputStatus"
-                        )
+                        "BinaryOutputStatus": outstation_application.db.BinaryOutputStatus
                     }
                     print(result)
                     sleep(2)
@@ -346,13 +302,8 @@ def main(parser=None, *args, **kwargs):
                     print(e)
             elif option == "dd":
                 print("You chose < dd > - display database")
-                db_print = outstation_application.db_handler.db
+                db_print = outstation_application.db
                 print(db_print)
-
-                # print(tabulate(to_flat_db(db_print), headers="keys", tablefmt="grid"))
-                # print(
-                #     tabulate(to_pnnl_schema(db_print), headers="keys", tablefmt="grid")
-                # )
 
                 sleep(2)
                 break
@@ -365,10 +316,8 @@ def main(parser=None, *args, **kwargs):
                 print(
                     "You chose < sc > - take a screenshot of the current database point values"
                 )
-                db_print = outstation_application.db_handler.db
                 p_save = f'/tmp/dnp3_db_screenshot_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
-                dnp3_db = Dnp3Database(db_print)
-                dnp3_db.to_csv(p_save)
+                outstation_application.db.to_csv(p_save)
 
                 # df_save.to_csv(p_save)
                 print(f"The database screenshot has been saved to {p_save}.")

@@ -7,7 +7,7 @@ from pydnp3 import opendnp3
 from utils import get_free_port
 
 from dnp3_python.dnp3station.master import MasterApplication
-from dnp3_python.dnp3station.outstation import MyOutStation
+from dnp3_python.dnp3station.outstation import OutStationApplication
 
 PORT = get_free_port()
 NUMBER_OF_DB_POINTS = 10
@@ -28,8 +28,8 @@ def master_new() -> Generator[MasterApplication, None, None]:
 
 
 @pytest.fixture(scope="module")
-def outstation_new() -> Generator[MyOutStation, None, None]:
-    outstation = MyOutStation(
+def outstation_new() -> Generator[OutStationApplication, None, None]:
+    outstation = OutStationApplication(
         outstation_ip="0.0.0.0",
         port=PORT,
         master_id=2,
@@ -41,6 +41,7 @@ def outstation_new() -> Generator[MyOutStation, None, None]:
         numBinaryOutputStatus=NUMBER_OF_DB_POINTS,
     )
     outstation.start()
+    outstation.update_db_with_random()
 
     yield outstation
     outstation.shutdown()

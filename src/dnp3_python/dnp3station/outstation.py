@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import random
 import sys
 import time
 from datetime import datetime
@@ -595,6 +596,9 @@ class OutStationApplication:
     def is_connected(self) -> bool:
         return self.my_outstation.is_connected
 
+    def get_config(self):
+        return self.my_outstation.get_config()
+
     def apply_update(self, measurement: OutstationCmdType, index: int) -> None:
         """
             Record an opendnp3 data value (Analog, Binary, etc.) in the outstation's database.
@@ -645,16 +649,33 @@ class OutStationApplication:
     def db(self) -> Dnp3Database:
         return Dnp3Database(self.my_outstation.db_handler.db)
 
-    # @property
-    # def dnp3_database(self) -> Dnp3Database:
-    #     return self.my_outstation.db_handler.dnp3_database
+    def update_db_with_random(self) -> None:
+        """
+        Update a random point in the outstation's database with a random value.
 
-    # def print_dnp3_database(self) -> None:
-    #     print(self.dnp3_database.to_csv())
+        This method iterates over the different types of points in the outstation's database
+        (binary, binary output status, analog, analog output status) and updates a random point
+        in each category with a random value. For binary points, a random boolean value is chosen.
+        For analog points, a random float value is generated within a range based on the index of
+        the point.
 
-    # def dnp3_database_to_csv(self, file_path: str | None = None):
-    #     if file_path is None:
-    #         file_path = f"/tmp/outstation_dnp3_database_{str(datetime.now())}.csv"
-    #         file_path = file_path.replace(" ", "_")
-    #     self.dnp3_database.to_csv(file_path)
-    #     # _log.info(f"Saved dnp3-database to {file_path=}")
+        Note: This method assumes that the `apply_update` method is defined elsewhere in the class.
+
+        Returns:
+            None
+        """
+        db_sizes = self.my_outstation.db_sizes
+        for n in range(db_sizes.numBinary):
+            val = random.choice([True, False])
+            self.apply_update(opendnp3.Binary(val), n)
+        for n in range(db_sizes.numBinaryOutputStatus):
+            val = random.choice([True, False])
+            self.apply_update(opendnp3.BinaryOutputStatus(val), n)
+        for n in range(db_sizes.numAnalog):
+            val = random.random() * pow(2, n)
+            val = round(val, 4)
+            self.apply_update(opendnp3.Analog(val), n)
+        for n in range(db_sizes.numAnalogOutputStatus):
+            val = random.random() * pow(2, n)
+            val = round(val, 4)
+            self.apply_update(opendnp3.AnalogOutputStatus(val), n)
