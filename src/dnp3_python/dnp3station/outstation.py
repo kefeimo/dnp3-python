@@ -266,11 +266,7 @@ class MyOutStation(opendnp3.IOutstationApplication):
         numOpen - numClose == 1 => SUCCESS
         numOpen - numClose == 0 => FAIL
         """
-        if (
-            self.channel_statistic.get("numOpen")
-            - self.channel_statistic.get("numClose")
-            == 1
-        ):
+        if self.channel_statistic["numOpen"] - self.channel_statistic["numClose"] == 1:
             return True
         else:
             return False
@@ -503,7 +499,7 @@ class MyOutstationCommandHandler(opendnp3.ICommandHandler):
         :return: CommandStatus
         """
         outstation_application_pool = MyOutStation.outstation_application_pool
-        outstation_app = outstation_application_pool.get(self.outstation_id)
+        outstation_app = outstation_application_pool[self.outstation_id]
 
         try:
             outstation_app.process_point_value("Select", command, index, None)
@@ -526,7 +522,7 @@ class MyOutstationCommandHandler(opendnp3.ICommandHandler):
         """
 
         outstation_application_pool = MyOutStation.outstation_application_pool
-        outstation_app = outstation_application_pool.get(self.outstation_id)
+        outstation_app = outstation_application_pool[self.outstation_id]
         try:
             # self.outstation_application.process_point_value('Operate', command, index, op_type)
             outstation_app.process_point_value("Operate", command, index, op_type)
@@ -662,32 +658,3 @@ class OutStationApplication:
     #         file_path = file_path.replace(" ", "_")
     #     self.dnp3_database.to_csv(file_path)
     #     # _log.info(f"Saved dnp3-database to {file_path=}")
-
-
-class Dnp3Database:
-    """
-    DNP3 database representation
-    """
-
-    def __init__(self, db: dict, *args, **kwargs):
-        self._db = db
-        self = db
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self._db})"
-
-    @property
-    def Analog(self) -> dict[int, float | None]:
-        return self._db["Analog"]
-
-    @property
-    def AnalogOutputStatus(self) -> dict[int, float | None]:
-        return self._db["AnalogOutputStatus"]
-
-    @property
-    def Binary(self) -> dict[int, bool | None]:
-        return self._db["Binary"]
-
-    @property
-    def BinaryOutputStatus(self) -> dict[int, bool | None]:
-        return self._db["BinaryOutputStatus"]

@@ -1,4 +1,3 @@
-# test_master.py
 from time import sleep
 from typing import Generator
 
@@ -14,7 +13,6 @@ PORT = get_free_port()
 
 @pytest.fixture(scope="function")
 def master_new() -> Generator[MyMaster, None, None]:
-    # master = MyMasterNew()
     master = MyMaster(
         master_ip="0.0.0.0",
         outstation_ip="127.0.0.1",
@@ -29,7 +27,6 @@ def master_new() -> Generator[MyMaster, None, None]:
 
 @pytest.fixture(scope="module")
 def outstation_new() -> Generator[MyOutStation, None, None]:
-    # outstation = MyOutStationNew()
     outstation = MyOutStation(
         outstation_ip="0.0.0.0",
         port=PORT,
@@ -43,9 +40,7 @@ def outstation_new() -> Generator[MyOutStation, None, None]:
     outstation.shutdown()
 
 
-# Test function to verify send_scan_all_request
 def test_send_scan_all_request(master_new, outstation_new):
-    # Setup the conditions for the test (e.g., known state of the outstation)
     value = 0.1234
     index = 0
     outstation_new.apply_update(opendnp3.Analog(value=value), index)
@@ -59,15 +54,8 @@ def test_send_scan_all_request(master_new, outstation_new):
             break
         sleep(1)
 
-    # expected_result = {
-    #     "AnalogOutputStatus": [(index, value_to_set)]
-    # }  # Example expected result format
-    # assert result == expected_result, f"Expected {expected_result}, got {result}"
 
-
-# Test function to verify send_direct_point_command
 def test_send_direct_point_command(master_new, outstation_new):
-    # Setup the conditions for the test (e.g., known state of the outstation)
     group = 40
     variation = 4
     index = 1
@@ -85,8 +73,3 @@ def test_send_direct_point_command(master_new, outstation_new):
         if result[index] is not None:
             break
         sleep(1)
-
-    # expected_result = {
-    #     "AnalogOutputStatus": [(index, value_to_set)]
-    # }  # Example expected result format
-    # assert result == expected_result, f"Expected {expected_result}, got {result}"

@@ -1,4 +1,4 @@
-# test_master.py
+import random
 from time import sleep
 from typing import Generator
 
@@ -10,11 +10,11 @@ from dnp3_python.dnp3station.master import MyMaster
 from dnp3_python.dnp3station.outstation import OutStationApplication
 
 PORT = get_free_port()
+NUMBER_OF_DB_POINTS = 10
 
 
 @pytest.fixture(scope="module")
 def master_new() -> Generator[MyMaster, None, None]:
-    # master = MyMasterNew()
     master = MyMaster(
         master_ip="0.0.0.0",
         outstation_ip="127.0.0.1",
@@ -29,13 +29,16 @@ def master_new() -> Generator[MyMaster, None, None]:
 
 @pytest.fixture(scope="function")
 def outstation_app() -> Generator[OutStationApplication, None, None]:
-    # outstation = MyOutStationNew()
     outstation = OutStationApplication(
         outstation_ip="0.0.0.0",
         port=PORT,
         master_id=2,
         outstation_id=1,
         concurrency_hint=1,
+        numAnalog=NUMBER_OF_DB_POINTS,
+        numAnalogOutputStatus=NUMBER_OF_DB_POINTS,
+        numBinary=NUMBER_OF_DB_POINTS,
+        numBinaryOutputStatus=NUMBER_OF_DB_POINTS,
     )
     outstation.start()
 
@@ -44,24 +47,24 @@ def outstation_app() -> Generator[OutStationApplication, None, None]:
 
 
 def test_apply_update(master_new, outstation_app):
-    value = 0.1234
-    index = 1
+    value = random.random()
+    index = random.randint(0, NUMBER_OF_DB_POINTS - 1)
     outstation_app.apply_update(opendnp3.Analog(value=value), index)
+    print(f"=== {index=}, {value=}")
 
     for i in range(10):
         result = outstation_app.db
-        # result_dnp3_database = outstation_app.dnp3_database
         print(f"{i=}, {result=}")
-        # print(f"{i=}, {result_dnp3_database=}")
         if result.Analog[index] != 0:
             break
         sleep(1)
 
 
 def test_send_scan_all_request_passive(master_new, outstation_app):
-    value = 0.1234
-    index = 0
+    value = random.random()
+    index = random.randint(0, NUMBER_OF_DB_POINTS - 1)
     outstation_app.apply_update(opendnp3.Analog(value=value), index)
+    print(f"=== {index=}, {value=}")
 
     for i in range(10):
         master_new.send_scan_all_request()
@@ -74,9 +77,10 @@ def test_send_scan_all_request_passive(master_new, outstation_app):
 
 
 def test_apply_update_analog_input(master_new, outstation_app):
-    value = 0.1234
-    index = 1
+    value = random.random()
+    index = random.randint(0, NUMBER_OF_DB_POINTS - 1)
     outstation_app.apply_update_analog_input(value, index)
+    print(f"=== {index=}, {value=}")
 
     for i in range(10):
         result = outstation_app.db
@@ -88,9 +92,10 @@ def test_apply_update_analog_input(master_new, outstation_app):
 
 
 def test_apply_update_analog_output(master_new, outstation_app):
-    value = 0.1234
-    index = 1
+    value = random.random()
+    index = random.randint(0, NUMBER_OF_DB_POINTS - 1)
     outstation_app.apply_update_analog_output(value, index)
+    print(f"=== {index=}, {value=}")
 
     for i in range(10):
         result = outstation_app.db
@@ -102,9 +107,10 @@ def test_apply_update_analog_output(master_new, outstation_app):
 
 
 def test_apply_update_binary_input(master_new, outstation_app):
-    value = True
-    index = 1
+    value = random.choice([True, False])
+    index = random.randint(0, NUMBER_OF_DB_POINTS - 1)
     outstation_app.apply_update_binary_input(value, index)
+    print(f"=== {index=}, {value=}")
 
     for i in range(10):
         result = outstation_app.db
@@ -116,9 +122,10 @@ def test_apply_update_binary_input(master_new, outstation_app):
 
 
 def test_apply_update_binary_output(master_new, outstation_app):
-    value = True
-    index = 1
+    value = random.choice([True, False])
+    index = random.randint(0, NUMBER_OF_DB_POINTS - 1)
     outstation_app.apply_update_binary_output(value, index)
+    print(f"=== {index=}, {value=}")
 
     for i in range(10):
         result = outstation_app.db

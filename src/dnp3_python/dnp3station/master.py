@@ -11,6 +11,7 @@ from pydnp3.opendnp3 import GroupVariation, GroupVariationID
 
 from .station_utils import (
     AppChannelListener,
+    Dnp3Database,
     MyLogger,
     SOEHandler,
     collection_callback,
@@ -558,7 +559,7 @@ class MyMaster:
         variation: int,
         index: int,
         val_to_set: DbPointVal,
-        call_back: Callable[[opendnp3.ICommandTaskResult], None] = None,
+        call_back: Callable[[opendnp3.ICommandTaskResult], None] | None = None,
         config: opendnp3.TaskConfig = None,
     ) -> None:
         """
@@ -645,7 +646,9 @@ class MyMaster:
         except AttributeError:
             pass
 
-    def send_scan_all_request(self, gv_ids: List[opendnp3.GroupVariationID] = None):
+    def send_scan_all_request(
+        self, gv_ids: List[opendnp3.GroupVariationID] | None = None
+    ):
         """send requests to retrieve all point values, if gv_ids not provided then use default"""
         config = opendnp3.TaskConfig().Default()
         if gv_ids is None:
@@ -657,3 +660,196 @@ class MyMaster:
             ]
         for gv_id in gv_ids:
             self.ScanAllObjects(self.master, gv_id, config)
+
+
+class MasterApplication:
+    """
+    Public interface wrapper on MyMaster.outstation_application.
+
+    This class provides a high-level interface for interacting with the DNP3 master.
+    It encapsulates the functionality of the underlying `MyMaster` object and provides
+    convenient methods for starting, shutting down, and sending scan requests to the master.
+
+    Args:
+        master_ip (str | None, optional): The IP address of the DNP3 master. Defaults to "0.0.0.0".
+        outstation_ip (str | None, optional): The IP address of the DNP3 outstation. Defaults to "127.0.0.1".
+        port (int | None, optional): The port number for communication. Defaults to 20000.
+        master_id (int | None, optional): The ID of the DNP3 master. Defaults to 2.
+        outstation_id (int | None, optional): The ID of the DNP3 outstation. Defaults to 1.
+        concurrency_hint (int | None, optional): A hint for the number of threads to use for processing. Defaults to 1.
+        log_handler (object, optional): The log handler for the DNP3 master. Defaults to `asiodnp3.ConsoleLogger().Create()`.
+        listener (object, optional): The channel listener for the DNP3 master. Defaults to `asiodnp3.PrintingChannelListener().Create()`.
+        soe_handler (object, optional): The SOE (Sequence of Events) handler for the DNP3 master. Defaults to `SOEHandler()`.
+        master_application (object, optional): The master application for the DNP3 master. Defaults to `asiodnp3.DefaultMasterApplication().Create()`.
+        channel_log_level (int, optional): The log level for the channel. Defaults to `opendnp3.levels.NORMAL`.
+        master_log_level (int, optional): The log level for the master. Defaults to 7 (warning level).
+        num_polling_retry (int, optional): The number of retries for polling requests. Defaults to 2.
+        delay_polling_retry (float, optional): The delay between polling retries in seconds. Defaults to 0.2.
+        stale_if_longer_than (float, optional): The time in seconds after which data is considered stale. Defaults to 2.
+        stack_config (object, optional): The stack configuration for the DNP3 master. Defaults to None.
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
+
+    Attributes:
+        my_master (MyMaster): The underlying `MyMaster` object.
+
+    """
+
+    def __init__(
+        self,
+        master_ip: str | None = "0.0.0.0",
+        outstation_ip: str | None = "127.0.0.1",
+        port: int | None = 20000,
+        master_id: int | None = 2,
+        outstation_id: int | None = 1,
+        concurrency_hint: int | None = 1,
+        log_handler=asiodnp3.ConsoleLogger().Create(),
+        listener=asiodnp3.PrintingChannelListener().Create(),
+        soe_handler=SOEHandler(),
+        master_application=asiodnp3.DefaultMasterApplication().Create(),
+        channel_log_level=opendnp3.levels.NORMAL,
+        master_log_level=7,  # wild guess, 7: warning, 15 (opendnp3.levels.NORMAL): info
+        num_polling_retry: int = 2,
+        delay_polling_retry: float = 0.2,  # in seconds
+        stale_if_longer_than: float = 2,  # in seconds
+        stack_config=None,
+        # manager = asiodnp3.DNP3Manager(2, asiodnp3.ConsoleLogger().Create())
+        *args,
+        **kwargs,
+    ):
+        self.my_master = MyMaster(
+            master_ip=master_ip,
+            outstation_ip=outstation_ip,
+            port=port,
+            master_id=master_id,
+            outstation_id=outstation_id,
+            concurrency_hint=concurrency_hint,
+            log_handler=log_handler,
+            listener=listener,
+            soe_handler=soe_handler,
+            master_application=master_application,
+            channel_log_level=channel_log_level,
+            master_log_level=master_log_level,
+            num_polling_retry=num_polling_retry,
+            delay_polling_retry=delay_polling_retry,
+            stale_if_longer_than=stale_if_longer_than,
+            stack_config=stack_config,
+        )
+
+    def start(self) -> None:
+        """
+        Starts the DNP3 master.
+
+        This method initiates the start of the DNP3 master, allowing it to begin communication with the outstation(s).
+        """
+        return self.my_master.start()
+
+    def shutdown(self) -> None:
+        """
+        Shuts down the DNP3 master.
+
+        This method calls the `shutdown` method of the underlying `my_master` object.
+
+        Returns:
+            None
+        """
+        return self.my_master.shutdown()
+
+    @property
+    def is_connected(self) -> bool:
+        return self.my_master.is_connected
+
+    @property
+    def db(self) -> Dnp3Database:
+        return Dnp3Database(self.my_master.soe_handler.db)
+
+    def send_scan_all_request(
+        self, gv_ids: List[opendnp3.GroupVariationID] | None = None
+    ):
+        """
+        Sends a scan all request to the DNP3 master.
+
+        Args:
+            gv_ids (List[opendnp3.GroupVariationID] | None, optional): A list of GroupVariationIDs to scan. Defaults to None.
+
+        Returns:
+            The result of the scan all request.
+        """
+        return self.my_master.send_scan_all_request(gv_ids=gv_ids)
+
+    def get_db_by_group_variation(self, group: int, variation: int) -> DbStorage:
+        """
+        Retrieves the database by group and variation.
+
+        Args:
+            group (int): The group number.
+            variation (int): The variation number.
+
+        Returns:
+            DbStorage: The database storage.
+        """
+        return self.my_master.get_db_by_group_variation(group, variation)
+
+    def send_direct_point_command(
+        self,
+        group: int,
+        variation: int,
+        index: int,
+        val_to_set: DbPointVal,
+        call_back: Callable[[opendnp3.ICommandTaskResult], None] | None = None,
+        config: opendnp3.TaskConfig = None,
+    ) -> None:
+        """
+        Sends a direct point command to the DNP3 master.
+
+        Args:
+            group (int): The group number for the command.
+            variation (int): The variation number for the command.
+            index (int): The index of the command.
+            val_to_set (DbPointVal): The value to set for the command.
+
+        Returns:
+            None
+        """
+        return self.my_master.send_direct_point_command(
+            group=group,
+            variation=variation,
+            index=index,
+            val_to_set=val_to_set,
+            call_back=call_back,
+            config=config,
+        )
+
+    def send_direct_analog_output_point_command(
+        self, index: int, val_to_set: float
+    ) -> None:
+        """
+        Sends a direct point command to the DNP3 master.
+
+        Args:
+            index (int): The index of the command.
+            val_to_set (float): The value to set for the command.
+
+        Returns:
+            None
+        """
+        return self.my_master.send_direct_point_command(
+            group=40, variation=4, index=index, val_to_set=val_to_set
+        )
+
+    def send_direct_binary_output_point_command(
+        self, index: int, val_to_set: bool
+    ) -> None:
+        """
+        Sends a direct point command to the DNP3 master.
+
+        Args:
+            index (int): The index of the command.
+            val_to_set (bool): The value to set for the command.
+
+        Returns:
+            None
+        """
+        return self.my_master.send_direct_point_command(
+            group=10, variation=2, index=index, val_to_set=val_to_set
+        )

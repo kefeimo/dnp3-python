@@ -10,7 +10,7 @@ from pydnp3 import opendnp3
 
 # from tabulate import tabulate
 from dnp3_python.dnp3station.outstation import MyOutStation
-from dnp3_python.dnp3station.station_utils import to_flat_db
+from dnp3_python.dnp3station.station_utils import Dnp3Database
 
 stdout_stream = logging.StreamHandler(sys.stdout)
 stdout_stream.setFormatter(
@@ -367,17 +367,8 @@ def main(parser=None, *args, **kwargs):
                 )
                 db_print = outstation_application.db_handler.db
                 p_save = f'/tmp/dnp3_db_screenshot_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
-                flat_dict = to_flat_db(db_print)
-                # Open the CSV file for writing
-                with open(p_save, mode="w", newline="") as file:
-                    # Create a CSV writer object
-                    writer = csv.writer(file)
-                    # Write the header (the keys of the dictionary)
-                    writer.writerow(flat_dict.keys())
-                    # Write the data rows
-                    # Transpose the values from the dictionary to rows in CSV
-                    writer.writerows(zip(*flat_dict.values()))
-                # df_save = to_pnnl_schema(db_print, is_wrapped_text=False)
+                dnp3_db = Dnp3Database(db_print)
+                dnp3_db.to_csv(p_save)
 
                 # df_save.to_csv(p_save)
                 print(f"The database screenshot has been saved to {p_save}.")
