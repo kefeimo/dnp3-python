@@ -646,19 +646,48 @@ class OutStationApplication:
         return self.my_outstation.apply_update(measurement, index)
 
     @property
-    def db(self) -> dict:
-        return self.my_outstation.db_handler.db
+    def db(self) -> Dnp3Database:
+        return Dnp3Database(self.my_outstation.db_handler.db)
+
+    # @property
+    # def dnp3_database(self) -> Dnp3Database:
+    #     return self.my_outstation.db_handler.dnp3_database
+
+    # def print_dnp3_database(self) -> None:
+    #     print(self.dnp3_database.to_csv())
+
+    # def dnp3_database_to_csv(self, file_path: str | None = None):
+    #     if file_path is None:
+    #         file_path = f"/tmp/outstation_dnp3_database_{str(datetime.now())}.csv"
+    #         file_path = file_path.replace(" ", "_")
+    #     self.dnp3_database.to_csv(file_path)
+    #     # _log.info(f"Saved dnp3-database to {file_path=}")
+
+
+class Dnp3Database:
+    """
+    DNP3 database representation
+    """
+
+    def __init__(self, db: dict, *args, **kwargs):
+        self._db = db
+        self = db
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._db})"
 
     @property
-    def dnp3_database(self) -> Dnp3Database:
-        return self.my_outstation.db_handler.dnp3_database
+    def Analog(self) -> dict[int, float | None]:
+        return self._db["Analog"]
 
-    def print_dnp3_database(self) -> None:
-        print(self.dnp3_database.to_csv())
+    @property
+    def AnalogOutputStatus(self) -> dict[int, float | None]:
+        return self._db["AnalogOutputStatus"]
 
-    def dnp3_database_to_csv(self, file_path: str | None = None):
-        if file_path is None:
-            file_path = f"/tmp/outstation_dnp3_database_{str(datetime.now())}.csv"
-            file_path = file_path.replace(" ", "_")
-        self.dnp3_database.to_csv(file_path)
-        # _log.info(f"Saved dnp3-database to {file_path=}")
+    @property
+    def Binary(self) -> dict[int, bool | None]:
+        return self._db["Binary"]
+
+    @property
+    def BinaryOutputStatus(self) -> dict[int, bool | None]:
+        return self._db["BinaryOutputStatus"]
