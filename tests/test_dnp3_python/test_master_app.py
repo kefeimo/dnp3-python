@@ -41,7 +41,7 @@ def outstation_new() -> Generator[OutStationApplication, None, None]:
         numBinaryOutputStatus=NUMBER_OF_DB_POINTS,
     )
     outstation.start()
-    outstation.update_db_with_random()
+    # outstation.update_db_with_random()
 
     yield outstation
     outstation.shutdown()
@@ -79,7 +79,7 @@ def test_send_direct_point_command(master_new, outstation_new):
         sleep(1)
         result = master_new.my_master.soe_handler.db["AnalogOutputStatus"]
         print(f"{i=}, {result=}")
-        if result[index] is not None:
+        if result[index] == value:
             break
         sleep(1)
     assert result[index] == value
@@ -97,7 +97,7 @@ def test_send_direct_analog_output_point_command(master_new, outstation_new):
         sleep(1)
         result = master_new.db.AnalogOutputStatus
         print(f"{i=}, {result=}")
-        if result[index] is not None:
+        if result[index] == value:
             break
         sleep(1)
     assert result[index] == value
@@ -115,7 +115,7 @@ def test_send_direct_binary_output_point_command(master_new, outstation_new):
         sleep(1)
         result = master_new.db.BinaryOutputStatus
         print(f"{i=}, {result=}")
-        if result[index] is not None:
+        if result[index] == value:
             break
         sleep(1)
     assert result[index] == value
