@@ -80,9 +80,9 @@ def test_send_scan_all_request_passive(master_new, outstation_app):
     for i in range(10):
         master_new.send_scan_all_request()
         sleep(1)
-        result_master = master_new.soe_handler.db
+        result_master = master_new.db
         print(f"{i=}, {result_master=}")
-        if result_master["Analog"][index] is not None:
+        if result_master.Analog[index] is not None:
             break
         sleep(1)
 
