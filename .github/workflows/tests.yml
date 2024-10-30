@@ -45,7 +45,7 @@ jobs:
     - name: Run Tests
       run: |
         pip install pytest
-        pytest -s -vv tests/test_dnp3_python/*
+        for file in tests/test_dnp3_python/test_*.py; do echo "Running pytest on $file"; pytest -s -vv $file; done  # Note: the file needs to run separately.
       env:
         PYTHONPATH: ${{ github.workspace }}
 
