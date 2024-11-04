@@ -550,11 +550,11 @@ class OutStationApplication:
 
     def __init__(
         self,
-        outstation_ip: str | None = "0.0.0.0",
-        port: int | None = 20000,
-        master_id: int | None = 2,
-        outstation_id: int | None = 1,
-        concurrency_hint: int | None = 1,
+        outstation_ip: str = "0.0.0.0",
+        port: int = 20000,
+        master_id: int = 2,
+        outstation_id: int = 1,
+        concurrency_hint: int = 1,
         channel_log_level=opendnp3.levels.NORMAL,
         outstation_log_level=opendnp3.levels.NORMAL,
         db_sizes: opendnp3.DatabaseSizes = None,

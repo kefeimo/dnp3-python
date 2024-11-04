@@ -30,7 +30,7 @@ def input_prompt(display_str=None, prefix="", menu_indicator="") -> str:
 def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     # Adding optional argument
     parser.add_argument(
-        "--master-ip=",
+        "--master-ip",
         action="store",
         default="0.0.0.0",
         type=str,
@@ -38,7 +38,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="master ip, default: 0.0.0.0",
     )
     parser.add_argument(
-        "--outstation-ip=",
+        "--outstation-ip",
         action="store",
         default="127.0.0.1",
         type=str,
@@ -46,7 +46,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="outstation ip, default: 127.0.0.1",
     )
     parser.add_argument(
-        "--port=",
+        "--port",
         action="store",
         default=20000,
         type=int,
@@ -54,7 +54,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="port, default: 20000",
     )
     parser.add_argument(
-        "--master-id=",
+        "--master-id",
         action="store",
         default=2,
         type=int,
@@ -62,7 +62,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="master id, default: 2",
     )
     parser.add_argument(
-        "--outstation-id=",
+        "--outstation-id",
         action="store",
         default=1,
         type=int,
@@ -98,18 +98,19 @@ def main(parser=None, *args, **kwargs):
         parser = setup_args(parser)
 
     # Read arguments from command line
-    args = parser.parse_args()
+    parse_args = parser.parse_args()
 
     # dict to store args.Namespace
-    d_args = vars(args)
-    print(__name__, d_args)
+    # d_args = vars(parse_args)
+    # print(__name__, d_args)
+    print(f"{parse_args=}")
     # print(args.__dir__())
     master_application = MasterApplication(
-        master_ip=d_args.get("master_ip="),
-        outstation_ip=d_args.get("outstation_ip="),
-        port=d_args.get("port="),
-        master_id=d_args.get("master_id="),
-        outstation_id=d_args.get("outstation_id="),
+        master_ip=parse_args.master_ip,
+        outstation_ip=parse_args.outstation_ip,
+        port=parse_args.port,
+        master_id=parse_args.master_id,
+        outstation_id=parse_args.outstation_id,
         # channel_log_level=opendnp3.levels.ALL_COMMS,
         # master_log_level=opendnp3.levels.ALL_COMMS
         # soe_handler=SOEHandler(soehandler_log_level=logging.DEBUG)

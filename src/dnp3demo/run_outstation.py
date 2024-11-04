@@ -36,7 +36,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     # parser.add_argument("-mip", "--master-ip", action="store", default="0.0.0.0", type=str,
     #                     metavar="<IP>")
     parser.add_argument(
-        "--outstation-ip=",
+        "--outstation-ip",
         action="store",
         default="0.0.0.0",
         type=str,
@@ -44,7 +44,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="outstation ip, default: 0.0.0.0",
     )
     parser.add_argument(
-        "--port=",
+        "--port",
         action="store",
         default=20000,
         type=int,
@@ -52,7 +52,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="port, default: 20000",
     )
     parser.add_argument(
-        "--master-id=",
+        "--master-id",
         action="store",
         default=2,
         type=int,
@@ -60,7 +60,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="master id, default: 2",
     )
     parser.add_argument(
-        "--outstation-id=",
+        "--outstation-id",
         action="store",
         default=1,
         type=int,
@@ -68,10 +68,13 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="master id, default: 1",
     )
     parser.add_argument(
-        "--init-random", action="store_true", help="if appears, init with random values"
+        "--init-random",
+        action="store_true",
+        default=False,
+        help="if appears, init with random values, default: False",
     )
     parser.add_argument(
-        "--n-ai=",
+        "--n-ai",
         action="store",
         default=5,
         type=int,
@@ -79,7 +82,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="number of AnalogInput, default: 5",
     )
     parser.add_argument(
-        "--n-ao=",
+        "--n-ao",
         action="store",
         default=5,
         type=int,
@@ -87,7 +90,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="number of AnalogOutput, default: 5",
     )
     parser.add_argument(
-        "--n-bi=",
+        "--n-bi",
         action="store",
         default=5,
         type=int,
@@ -95,7 +98,7 @@ def setup_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         help="number of BinaryInput, default: 5",
     )
     parser.add_argument(
-        "--n-bo=",
+        "--n-bo",
         action="store",
         default=5,
         type=int,
@@ -132,11 +135,12 @@ def main(parser=None, *args, **kwargs):
         parser = setup_args(parser)
 
     # Read arguments from command line
-    args = parser.parse_args()
+    parse_args: argparse.Namespace = parser.parse_args()
 
     # dict to store args.Namespace
-    d_args = vars(args)
-    print(__name__, d_args)
+    # d_args = vars(parse_args)
+    # print(__name__, f"{d_args=}")
+    print(f"{parse_args=}")
 
     # db_sizes = opendnp3.DatabaseSizes.AllTypes(count=5)
     # db_sizes = opendnp3.DatabaseSizes(
@@ -152,18 +156,18 @@ def main(parser=None, *args, **kwargs):
 
     outstation_application = OutStationApplication(
         # masterstation_ip_str=args.master_ip,
-        outstation_ip=d_args.get("outstation_ip="),
-        port=d_args.get("port="),
-        master_id=d_args.get("master_id="),
-        outstation_id=d_args.get("outstation_id="),
+        outstation_ip=parse_args.outstation_ip,
+        port=parse_args.port,
+        master_id=parse_args.master_id,
+        outstation_id=parse_args.outstation_id,
         # db_sizes=db_sizes,
         # channel_log_level=opendnp3.levels.ALL_COMMS,
         # master_log_level=opendnp3.levels.ALL_COMMS
         # soe_handler=SOEHandler(soehandler_log_level=logging.DEBUG)
-        numAnalog=d_args.get("n_ai="),
-        numAnalogOutputStatus=d_args.get("n_ao="),
-        numBinary=d_args.get("n_bi="),
-        numBinaryOutputStatus=d_args.get("n_bo="),
+        numAnalog=parse_args.n_ai,
+        numAnalogOutputStatus=parse_args.n_ao,
+        numBinary=parse_args.n_bi,
+        numBinaryOutputStatus=parse_args.n_bo,
     )
     _log.info("Connection Config", outstation_application.get_config())
     outstation_application.start()
@@ -176,7 +180,7 @@ def main(parser=None, *args, **kwargs):
 
     # Additional init for demo purposes
     # if d_args.get("init_random")==True, init with random values
-    if d_args.get("init_random"):
+    if parse_args.init_random:
         outstation_application.update_db_with_random()
 
     count = 0

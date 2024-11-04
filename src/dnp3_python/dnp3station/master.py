@@ -697,12 +697,12 @@ class MasterApplication:
 
     def __init__(
         self,
-        master_ip: str | None = "0.0.0.0",
-        outstation_ip: str | None = "127.0.0.1",
-        port: int | None = 20000,
-        master_id: int | None = 2,
-        outstation_id: int | None = 1,
-        concurrency_hint: int | None = 1,
+        master_ip: str = "0.0.0.0",
+        outstation_ip: str = "127.0.0.1",
+        port: int = 20000,
+        master_id: int = 2,
+        outstation_id: int = 1,
+        concurrency_hint: int = 1,
         log_handler=asiodnp3.ConsoleLogger().Create(),
         listener=asiodnp3.PrintingChannelListener().Create(),
         soe_handler=SOEHandler(),
